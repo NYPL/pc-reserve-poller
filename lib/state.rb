@@ -16,7 +16,7 @@ class State
     state_object.to_json
   end
 
-  def self.from_response (db_response)
+  def self.from_db_result (db_response)
     state_object = extract_state_from_db_response db_response
     State.new state_object
   end

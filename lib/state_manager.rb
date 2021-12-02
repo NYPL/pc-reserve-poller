@@ -6,14 +6,16 @@ require 'uri'
 
 # Class for managing the state of the poller in S3
 class StateManager
-  
-    @@s3 = Aws::S3::Client.new(region: ENV['S3_AWS_REGION'])
+
+    def self.s3
+      @@s3 ||= Aws::S3::Client.new(region: ENV['S3_AWS_REGION'])
+    end
 
     # Load current state from S3 object
     def self.fetch_current_state
         # Fetch JSON object from S3
         begin
-            status_uri = URI("#{ENV['NYPL_CORE_S3_BASE_URL']}/#{ENV['BUCKET_NAME']}/#{ENV['SCHEMA_TYPE'].downcase}_poller_status.json")
+            status_uri = URI("#{ENV['S3_BASE_URL']}/#{ENV['BUCKET_NAME']}/#{ENV['SCHEMA_TYPE'].downcase}_poller_status.json")
             $logger.debug "Fetching state from #{status_uri}"
             response = Net::HTTP.get_response(status_uri)
         rescue Exception => e
@@ -42,7 +44,7 @@ class StateManager
         # Send object to S3.
         # If this fails the function errors and records are retried from the previous position
         begin
-            resp = @@s3.put_object({
+            resp = s3.put_object({
                 :body => state_json,
                 :bucket => ENV['BUCKET_NAME'],
                 :key => "#{ENV['SCHEMA_TYPE'].downcase}_poller_status.json",

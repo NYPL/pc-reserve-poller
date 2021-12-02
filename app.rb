@@ -3,8 +3,9 @@ require 'nypl_ruby_util'
 require_relative 'lib/state_manager'
 require_relative 'lib/query_builder'
 require_relative 'lib/pg_manager'
-require_relative 'lib/patron_batch'
+require_relative 'lib/pc_reserve_batch'
 require_relative 'lib/state'
+require_relative 'lib/mysql_db_manager'
 
 def init
   $logger = NYPLRubyUtil::NyplLogFormatter.new(STDOUT, level: ENV['LOG_LEVEL'])
@@ -16,9 +17,11 @@ def init
     )
 
   $kms_client = ENV['APP_ENV'] == 'local' ?
-      NYPLRubyUtil::KmsClient.new({
-          access_key_id: ENV['AWS_ACCESS_KEY_ID'], secret_access_key: ENV['AWS_SECRET_ACCESS_KEY']
-      }) : NYPLRubyUtil::KmsClient.new
+      NYPLRubyUtil::KmsClient.new(
+        { profile: ENV['AWS_PROFILE'] }
+      ) : NYPLRubyUtil::KmsClient.new
+
+  $pg_manager = PSQLClient.new
 
   $logger.debug "Initialized function"
 end
@@ -26,22 +29,28 @@ end
 def handle_event(event:, context:)
   init
 
-  # get the required db params from the current state
-  current_state = State.from_s3 StateManager.fetch_current_state
-  cr_key = current_state.cr_key
+  # get the required db params from the current state if not configured locally
+  if ENV['CR_KEY_START']
+    cr_key = ENV['CR_KEY_START']
+  else
+    current_state = State.from_s3 StateManager.fetch_current_state
+    cr_key = current_state.cr_key
+  end
 
   # build and execute the query
-  query  = QueryBuilder.from { cr_key: cr_key }
-  response = PGManager.exec_query query
+  query  = QueryBuilder.from({ cr_key: cr_key })
+  response = MySQLDBManager.new.exec_query query
 
   # process the results in kinesis
-  patron_batch = PatronBatch.new response
-  patron_batch.process
+  pc_reserve_batch = PcReserveBatch.new response
+  pc_reserve_batch.process
 
 
-  # update the state
-  new_state = State.from_response response
-  StateManager.set_current_state new_state.json
+  # update the state unless this is a test run
+  unless ENV['UPDATE_STATE'] == 'false'
+    new_state = State.from_db_result response
+    StateManager.set_current_state new_state.json
+  end
 
   $logger.info "Processing complete"
 end

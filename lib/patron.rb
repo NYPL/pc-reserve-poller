@@ -1,94 +1,42 @@
-require_relative './patron_service'
+require 'nypl_ruby_util'
+require_relative './safe_navigation_wrapper'
+
+
+# Wrapper class for patrons fetched from the Patron Service
 
 class Patron
-  attr_accessor :event, :data, :patron_service_response
+  attr_accessor :data, :id
 
-  def initialize (data)
-    @data = data
-    @patron_service_response = PatronService.new @data["pcrUserID"]
+
+  def initialize (id)
+    @id = id
   end
 
-  #  patron_id: Interpret pcrUserID as a patron barcode.
-  # Use the PatronService to convert it to a patronId.
-  # Apply bcrypt obfuscation documented with samples here and implemented in Java here.
-  def patron_id
-    obfuscate patron_service_response.patron_id
+  def get_data
+    begin
+      resp = Patron.platform_client.get("#{ENV['PATRON_ENDPOINT']}/#{id}")
+      self.data = resp["data"]
+    rescue StandardError => e
+      $logger.error("Failed to fetch patron data for #{id}", e.message)
+      raise PatronError.new("Error fetching patron #{id}")
+    end
   end
 
-  #  ptype_code: Using patron record already fetched, evaluate fixedFields[“47”][“value”]
-  def ptype_code
+
+  def self.from (id)
+    patron = Patron.new id
+    patron.get_data
+    SafeNavigationWrapper.new patron.data
   end
 
-  #  patron_home_library_code: Using patron record already fetched, evaluate fixedFields[“53”][“value”]. Trim whitespace.
-  def patron_home_library_code
+  def self.platform_client
+    @@platform_client ||= ENV['APP_ENV'] == 'local' ?
+      # NYPLRubyUtil::PlatformApiClient.new( kms_options: { access_key_id: ENV['AWS_ACCESS_KEY_ID'], secret_access_key: ENV['AWS_SECRET_ACCESS_KEY'] }) :
+      NYPLRubyUtil::PlatformApiClient.new( kms_options: { profile: ENV['AWS_PROFILE'] }) :
+      NYPLRubyUtil::PlatformApiClient.new
   end
 
-  #  pcode3: Using patron record already fetched, evaluate patronCodes[“pcode3”].
-  def pcode3
-  end
-
-  #  postal_code: Query from Sierra directly (see “Patron Postal Code Concerns”)
-  def postal_code
-  end
-
-  #  geoid: Placeholder for future census tract work. Set to null. (We’re only adding it now because it’s challenging to modify Avro schemas later once the pipeline is active.)
-  def geoid
-    nil
-  end
-
-  # key: Obfuscated crKey (see documentation on obfuscation techniques)
-  def key
-    obfuscate data["pcrKey"]
-  end
-
-  # minutes_used
-  def minutes_used
-    data["pcrMinutesUsed"]
-  end
-
-  # transaction_et: pcrDateTime converted to ET, cast to DATE
-  def transaction_et
-  end
-
-  # branch: pcrBranch
-  def branch
-    data["pcrBranch"]
-  end
-
-  # area: pcrArea
-  def area
-    data["pcrArea"]
-  end
-
-  # staff_override: Value of pcrUserData1?
-  def staff_override
-    data["pcrUserData1"]
-  end
-
-  def build_event_from_data
-      fields = [
-        :patron_id,
-        :ptype_code,
-        :patron_home_library_code,
-        :pcode3,
-        :postal_code,
-        :geoid,
-        :key,
-        :minutes_used,
-        :transaction_et,
-        :branch,
-        :area,
-        :staff_override,
-      ]
-      self.event = fields.map {|field| [ field, self.send(field) ]}.to_h
-  end
-
-  def push_event
-    $kinesis_client << event
-  end
-
-  def process
-    build_event_from_data
-    push_event
-  end
 end
+
+
+class PatronError < StandardError; end

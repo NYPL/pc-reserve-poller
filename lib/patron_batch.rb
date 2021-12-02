@@ -1,41 +1,34 @@
-require_relative './patron'
+require_relative './safe_navigation_wrapper'
 
-
-# Wrapper for pushing to Kinesis
+# A helper class for requresting a batch of patron data from Platform
 
 class PatronBatch
-  attr_accessor :db_response, :process_statuses
 
-  def initialize (db_response)
-    @db_response = db_response
-    @process_statuses = { :success => 0, :error => 0 }
+  def initialize(barcodes)
+    @barcodes = barcodes
+    @platform_client = ENV['APP_ENV'] == 'local' ?
+      NYPLRubyUtil::PlatformApiClient.new( kms_options: { profile: ENV['AWS_PROFILE'] }) :
+      NYPLRubyUtil::PlatformApiClient.new
   end
 
-
-  def initialize_events
-  end
-
-  def process
-    db_response.each do |row|
-      begin
-        patron = Patron.new row
-        patron.process
-      rescue AvroError => e
-        $logger.warn "Failed avro validation", { :status => e.message }
-        @process_statuses[:error] += 1
-        next
-      rescue NYPLError => e
-        $logger.warn "Record failed to write to kinesis", { :status => e.message }
-        @process_statuses[:error] += 1
-        next
-      end
-
-      $logger.info "Successfully processed Record"
-      @process_statuses[:success] += 1
+  def get_resp
+    begin
+      resp = @platform_client.get("#{ENV['PATRON_ENDPOINT']}?barcode=#{@barcodes.join(",")}")
+      resp["data"].map {|row| { barcode: @barcodes.first, row: row }}   # Actually only fetching one barcode at a time
+    rescue StandardError => e
+      $logger.error("Failed to fetch patron data for ids #{@barcodes}")
+      []
     end
-
-    $logger.info "Successfully processed #{process_statuses[:success]} records, with #{process_statuses[:error]} errors"
   end
 
+  def match_to_ids (resp)
+    resp.map do |row|
+      { row[:barcode] => SafeNavigationWrapper.new row[:row] }
+    end
+  end
+
+  def self.batch_size
+    ENV['PATRON_BATCH_SIZE']
+  end
 
 end

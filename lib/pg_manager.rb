@@ -5,11 +5,11 @@ require 'pg'
 class PSQLClient
     def initialize
         @conn = PG.connect(
-            host: ENV['DB_HOST'],
-            port: ENV['DB_PORT'],
-            dbname: ENV['DB_NAME'],
-            user: $kms_client.decrypt(ENV['DB_USER']),
-            password: $kms_client.decrypt(ENV['DB_PSWD'])
+            host: ENV['SIERRA_DB_HOST'],
+            port: ENV['SIERRA_DB_PORT'],
+            dbname: ENV['SIERRA_DB_NAME'],
+            user: $kms_client.decrypt(ENV['SIERRA_DB_USER']),
+            password: $kms_client.decrypt(ENV['SIERRA_DB_PSWD'])
         )
     end
 
