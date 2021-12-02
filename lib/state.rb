@@ -9,7 +9,7 @@ class State
   end
 
   def cr_key
-    state_object[:cr_key]
+    state_object["cr_key"]
   end
 
   def json
@@ -27,7 +27,7 @@ class State
   end
 
   def self.extract_state_from_db_response (db_response)
-    { cr_key: db_response.last["pcrKey"] }
+    { "cr_key" => db_response.last["pcrKey"] }
   end
 
   def self.extract_state_from_s3_response (s3_response)
