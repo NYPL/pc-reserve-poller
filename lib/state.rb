@@ -9,7 +9,7 @@ class State
   end
 
   def cr_key
-    state_object["cr_key"]
+    state_object[:cr_key]
   end
 
   def json
