@@ -13,11 +13,12 @@ class PcReserveBatch
     @db_response = db_response
     @process_statuses = { :success => 0, :error => 0 }
     @barcodes = db_response.map { |row| row["pcrUserID"] } # the pcrUserID is a barcode
-    @patron_batch = Batcher.from (PatronBatch, @barcodes)
-    @sierra_batch = Batcher.from (SierraBatch, @patron_batch.keys)
   end
 
   def process
+    @patron_batch = Batcher.from (PatronBatch, @barcodes)
+    @sierra_batch = Batcher.from (SierraBatch, @patron_batch.keys)
+    
     db_response.each do |row|
       begin
         pc_reserve = PcReserve.new row, @sierra_batch, @patron_batch
