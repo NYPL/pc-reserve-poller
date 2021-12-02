@@ -17,8 +17,8 @@ class PcReserveBatch
 
   def process
     @patron_batch = Batcher.from (PatronBatch, @barcodes)
-    @sierra_batch = Batcher.from (SierraBatch, @patron_batch.keys)
-    
+    @sierra_batch = Batcher.from (SierraBatch, @patron_batch.values.map { |patron| patron["id"].value })
+
     db_response.each do |row|
       begin
         pc_reserve = PcReserve.new row, @sierra_batch, @patron_batch

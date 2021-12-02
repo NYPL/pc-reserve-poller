@@ -1,4 +1,3 @@
-require_relative './patron'
 require_relative './obfuscation_helper'
 require_relative './pg_manager'
 
@@ -8,8 +7,8 @@ class PcReserve
   def initialize (data, sierra_batch, patron_batch)
     @data = data
     @barcode = @data["pcrUserID"]
-    @patron = Patron.from patron_batch[@id]
-    @id = @patron["id"]
+    @patron = patron_batch[@barcode]
+    @id = @patron["id"].value
     @sierra_batch = sierra_batch
   end
 
@@ -17,7 +16,7 @@ class PcReserve
   # Use the PatronService to convert it to a patronId.
   # Apply bcrypt obfuscation documented with samples here and implemented in Java here.
   def patron_id
-    ObfuscationHelper.obfuscate patron["id"].value
+    ObfuscationHelper.obfuscate @id
   end
 
   #  ptype_code: Using patron record already fetched, evaluate fixedFields[“47”][“value”]
