@@ -22,8 +22,8 @@ class Batcher
   end
 
 
-  def from(ids)
-    batch = Batcher.new(ids)
+  def from(type, ids)
+    batch = Batcher.new(type, ids)
     batch.process
   end
 
