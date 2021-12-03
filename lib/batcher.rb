@@ -9,8 +9,8 @@ class Batcher
   end
 
   def process
-    responses = ids.each_slice(type.batch_size).map do |slice|
-      batch = type.new slice
+    responses = @ids.each_slice(@type.batch_size.to_i).map do |slice|
+      batch = @type.new slice
       resp = batch.get_resp
       batch.match_to_ids resp
     end
@@ -22,7 +22,7 @@ class Batcher
   end
 
 
-  def from(type, ids)
+  def self.from(type, ids)
     batch = Batcher.new(type, ids)
     batch.process
   end

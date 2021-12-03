@@ -16,15 +16,17 @@ class PcReserveBatch
   end
 
   def process
-    @patron_batch = Batcher.from (PatronBatch, @barcodes)
-    @sierra_batch = Batcher.from (SierraBatch, @patron_batch.values.map { |patron| patron["id"].value })
+    @patron_batch = Batcher.from(PatronBatch, @barcodes)
+    @sierra_batch = Batcher.from(SierraBatch, @patron_batch.values.map { |patron| patron["id"].value })
 
-    db_response.each do |row|
+    matched_responses = db_response.filter { |row| @patron_batch[row["pcrUserID"]] }
+    matched_responses.each do |row|
       begin
+        $logger.debug("Processing row #{row}")
         pc_reserve = PcReserve.new row, @sierra_batch, @patron_batch
         pc_reserve.process
       rescue AvroError => e
-        $logger.warn "Failed avro validation", { :status => e.message }
+        $logger.warn "Failed avro validation for row #{row}", { :status => e.message }
         @process_statuses[:error] += 1
         next
       rescue NYPLError => e

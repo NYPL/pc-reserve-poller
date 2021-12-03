@@ -22,9 +22,10 @@ class PatronBatch
   end
 
   def match_to_ids (resp)
-    resp.map do |row|
-      { row[:barcode] => SafeNavigationWrapper.new row[:row] }
+    rows = resp.map do |row|
+      [ row[:barcode], SafeNavigationWrapper.new(row[:row]) ]
     end
+    rows.to_h
   end
 
   def self.batch_size

@@ -6,4 +6,4 @@ WORKDIR /src
 
 RUN bundle install
 
-CMD ["./hello_world.rb"]
+CMD ["./index.rb"]

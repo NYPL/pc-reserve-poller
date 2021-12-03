@@ -9,8 +9,8 @@ class SierraBatch
     begin
 
       query = "SELECT patron_view.record_num,patron_record_address.postal_code" +
-        "FROM sierra_view.patron_view LEFT OUTER JOIN sierra_view.patron_record_address ON patron_record_address.patron_record_id=patron_view.id" +
-        "WHERE patron_view.record_num IN (#{@ids.join})"
+        " FROM sierra_view.patron_view LEFT OUTER JOIN sierra_view.patron_record_address ON patron_record_address.patron_record_id=patron_view.id" +
+        " WHERE patron_view.record_num IN (#{@ids.join(",")})"
 
       $pg_manager.exec_query query
 
@@ -21,9 +21,11 @@ class SierraBatch
   end
 
   def match_to_ids(resp)
-    resp.map do |row|
-      { row["record_num"] => row["postal_code"] }
+    rows = resp.map do |row|
+      [ row["record_num"], row["postal_code"] ]
     end
+
+    rows.to_h
   end
 
   def self.batch_size

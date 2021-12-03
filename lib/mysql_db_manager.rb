@@ -11,7 +11,7 @@ class MySQLDBManager
       port: ENV['ENVISIONWARE_PORT'],
       database: ENV['ENVISIONWARE_NAME'],
       username: $kms_client.decrypt(ENV['ENVISIONWARE_USER']),
-      password: $kms_client.decrype(ENV['ENVISIONWARE_PASSWORD'])
+      password: $kms_client.decrypt(ENV['ENVISIONWARE_PASSWORD'])
     )
   end
 

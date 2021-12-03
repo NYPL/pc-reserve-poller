@@ -8,7 +8,7 @@ class PcReserve
     @data = data
     @barcode = @data["pcrUserID"]
     @patron = patron_batch[@barcode]
-    @id = @patron["id"].value
+    @id = @patron["id"].value.to_s
     @sierra_batch = sierra_batch
   end
 
@@ -21,7 +21,7 @@ class PcReserve
 
   #  ptype_code: Using patron record already fetched, evaluate fixedFields[“47”][“value”]
   def ptype_code
-    patron["fixedFields"]["47"]["value"].value
+    patron["fixedFields"]["47"]["value"].value.to_i
   end
 
   #  patron_home_library_code: Using patron record already fetched, evaluate fixedFields[“53”][“value”]. Trim whitespace.
@@ -36,10 +36,11 @@ class PcReserve
 
   #  postal_code: Query from Sierra directly (see “Patron Postal Code Concerns”)
   def postal_code
-    sierra_resp = sierra_batch[@id]
+    sierra_resp = @sierra_batch[@id]
 
     if !sierra_resp
       $logger.warn('Received no matching postal code')
+      nil
     else
       sierra_resp
     end
@@ -63,7 +64,7 @@ class PcReserve
 
   # transaction_et: pcrDateTime
   def transaction_et
-    data["pcrDateTime"]
+    data["pcrDateTime"].to_s
   end
 
   # branch: pcrBranch
@@ -100,6 +101,7 @@ class PcReserve
   end
 
   def push_event
+    $logger.debug("Pushing event: #{event}")
     $kinesis_client << event
   end
 
