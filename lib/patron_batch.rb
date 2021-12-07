@@ -1,3 +1,4 @@
+require 'nypl_ruby_util'
 require_relative './safe_navigation_wrapper'
 
 # A helper class for requresting a batch of patron data from Platform

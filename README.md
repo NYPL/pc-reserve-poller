@@ -8,7 +8,8 @@ SETTING UP
 - cd
 - make sure docker is running
 - make sure you have aws credentials configured
-- check your local env (copy from env.sample)
+- check your local env
+- build docker image
 - run docker command
 
 CONTRIBUTING

@@ -5,4 +5,10 @@ class Irrelevant
   def method_missing(name, *args, &block)
   end
 
+  def decrypt(*args)
+  end
+
+  def info(*args)
+  end
+
 end

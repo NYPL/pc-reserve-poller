@@ -27,7 +27,20 @@ ENV['S3_BASE_URL'] = 'http://www.fakes3.com'
 ENV['BUCKET_NAME'] = 'fake_bucket'
 ENV['PATRON_ENDPOINT'] = 'http://www.fake_patron.com'
 ENV['BCRYPT_SALT'] = 'NaCl'
+ENV['ENVISIONWARE_USER'] = 'fake_envisionware_user'
+ENV['ENVISIONWARE_PASSWORD'] = 'fake_envisionware_password'
+ENV['ENVISIONWARE_HOST'] = 'fake_envisionware_host'
+ENV['ENVISIONWARE_PORT'] = 'fake_envisionware_port'
+ENV['ENVISIONWARE_NAME'] = 'fake_envisionware_name'
+ENV['PATRON_BATCH_SIZE'] = '123'
+ENV['SIERRA_DB_HOST'] = 'fake_sierra_host'
+ENV['SIERRA_DB_PORT'] = 'fake_sierra_port'
+ENV['SIERRA_DB_NAME'] = 'fake_sierra_name'
+ENV['SIERRA_DB_USER'] = 'fake_sierra_user'
+ENV['SIERRA_DB_PSWD'] = 'fake_sierra_password'
+ENV['SIERRA_BATCH_SIZE'] = '1'
 $logger = Irrelevant.new
+$kms_client = Irrelevant.new
 
 
 

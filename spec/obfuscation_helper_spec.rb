@@ -4,6 +4,11 @@ require_relative '../lib/obfuscation_helper'
 
 describe 'ObfuscationHelper' do
 
+  before(:each) do
+    $kms_client = double()
+    allow($kms_client).to receive(:decrypt).with('NaCl').and_return('NaCl')
+  end
+
   describe '#obfuscate' do
     it 'should encrypt the input string exactly as specified' do
       fake_hash = double()

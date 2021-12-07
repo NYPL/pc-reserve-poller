@@ -3,7 +3,7 @@ require_relative './spec_helper'
 
 describe 'state' do
   before(:each) do
-    @test_state_object = { cr_key: 'test' }
+    @test_state_object = { "cr_key" => 'test' }
   end
 
   describe '#init' do
@@ -36,7 +36,7 @@ describe 'state' do
 
   describe 'from_s3' do
     it 'should return a state instance matching the s3 response' do
-      state = State.from_s3({ cr_key: 1 })
+      state = State.from_s3({ "cr_key"  => 1 })
       expect(state.cr_key).to eql(1)
     end
   end
@@ -44,7 +44,7 @@ describe 'state' do
   describe '#extract_state_from_db_response' do
     it 'should return an object with the cr_key from the db response\'s pcrKey' do
       obj = State.extract_state_from_db_response ([ { 'pcrKey' => 1}, { 'pcrKey' => 2} ])
-      expect(obj).to eql({ :cr_key => 2})
+      expect(obj).to eql({ "cr_key" => 2})
     end
   end
 
