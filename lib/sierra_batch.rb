@@ -29,7 +29,7 @@ class SierraBatch
   end
 
   def self.batch_size
-    ENV['SIERRA_BATCH_SIZE']
+    ENV['SIERRA_BATCH_SIZE'].to_i
   end
 
 

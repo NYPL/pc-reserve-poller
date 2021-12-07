@@ -58,7 +58,7 @@ describe 'SierraBatch' do
 
   describe '#batch_size' do
     it 'should get the configured batch size' do
-      expect(SierraBatch.batch_size).to eql('1')
+      expect(SierraBatch.batch_size).to eql(1)
     end
   end
 

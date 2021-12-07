@@ -30,7 +30,7 @@ class PatronBatch
   end
 
   def self.batch_size
-    ENV['PATRON_BATCH_SIZE']
+    ENV['PATRON_BATCH_SIZE'].to_i
   end
 
 end
