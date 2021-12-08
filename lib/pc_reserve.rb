@@ -1,5 +1,5 @@
 require_relative './obfuscation_helper'
-require_relative './pg_manager'
+require_relative './sierra_db_manager'
 
 class PcReserve
   attr_accessor :event, :data, :patron

@@ -1,6 +1,6 @@
 require_relative './spec_helper'
 require_relative '../lib/sierra_batch'
-require_relative '../lib/pg_manager'
+require_relative '../lib/sierra_db_manager'
 
 describe 'SierraBatch' do
 
@@ -8,15 +8,15 @@ describe 'SierraBatch' do
   describe '#get_resp' do
     before(:each) do
       @ids = [1,2,3]
-      $pg_manager = double()
+      $sierra_db_manager = double()
       @sierra_batch = SierraBatch.new @ids
     end
 
     it 'should make the correct query' do
-      allow($pg_manager).to receive(:exec_query).with("SELECT patron_view.record_num,patron_record_address.postal_code" +
+      allow($sierra_db_manager).to receive(:exec_query).with("SELECT patron_view.record_num,patron_record_address.postal_code" +
         " FROM sierra_view.patron_view LEFT OUTER JOIN sierra_view.patron_record_address ON patron_record_address.patron_record_id=patron_view.id" +
         " WHERE patron_view.record_num IN (1,2,3);")
-      expect($pg_manager).to receive(:exec_query).with("SELECT patron_view.record_num,patron_record_address.postal_code" +
+      expect($sierra_db_manager).to receive(:exec_query).with("SELECT patron_view.record_num,patron_record_address.postal_code" +
         " FROM sierra_view.patron_view LEFT OUTER JOIN sierra_view.patron_record_address ON patron_record_address.patron_record_id=patron_view.id" +
         " WHERE patron_view.record_num IN (1,2,3);")
       @sierra_batch.get_resp
@@ -24,16 +24,16 @@ describe 'SierraBatch' do
 
     it 'should return response in case of successful query' do
       @successful_response = double()
-      allow($pg_manager).to receive(:exec_query).with("SELECT patron_view.record_num,patron_record_address.postal_code" +
+      allow($sierra_db_manager).to receive(:exec_query).with("SELECT patron_view.record_num,patron_record_address.postal_code" +
         " FROM sierra_view.patron_view LEFT OUTER JOIN sierra_view.patron_record_address ON patron_record_address.patron_record_id=patron_view.id" +
         " WHERE patron_view.record_num IN (1,2,3);").and_return @successful_response
       expect(@sierra_batch.get_resp).to eql(@successful_response)
     end
 
     it 'should return [] in case of errors' do
-      allow($pg_manager).to receive(:exec_query).with("SELECT patron_view.record_num,patron_record_address.postal_code" +
+      allow($sierra_db_manager).to receive(:exec_query).with("SELECT patron_view.record_num,patron_record_address.postal_code" +
         " FROM sierra_view.patron_view LEFT OUTER JOIN sierra_view.patron_record_address ON patron_record_address.patron_record_id=patron_view.id" +
-        " WHERE patron_view.record_num IN (1,2,3);").and_raise PSQLError
+        " WHERE patron_view.record_num IN (1,2,3);").and_raise SierraDbError
       expect(@sierra_batch.get_resp ).to eql([])
     end
   end

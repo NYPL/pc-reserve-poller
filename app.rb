@@ -2,7 +2,7 @@ require 'nypl_ruby_util'
 
 require_relative 'lib/state_manager'
 require_relative 'lib/query_builder'
-require_relative 'lib/pg_manager'
+require_relative 'lib/sierra_db_manager'
 require_relative 'lib/pc_reserve_batch'
 require_relative 'lib/state'
 require_relative 'lib/mysql_db_manager'
@@ -21,7 +21,7 @@ def init
         { profile: ENV['AWS_PROFILE'] }
       ) : NYPLRubyUtil::KmsClient.new
 
-  $pg_manager = PSQLClient.new
+  $sierra_db_manager = SierraDbClient.new
 
   $logger.debug "Initialized function"
 end

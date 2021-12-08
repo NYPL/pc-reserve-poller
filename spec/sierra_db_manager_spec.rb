@@ -1,8 +1,8 @@
 require_relative './spec_helper'
-require_relative '../lib/pg_manager'
+require_relative '../lib/sierra_db_manager'
 
 
-describe 'PSQLClient' do
+describe 'SierraDbClient' do
 
   before(:each) do
     $kms_client = double()
@@ -21,7 +21,7 @@ describe 'PSQLClient' do
         password: 'decrypted_password'
       }).and_return client
 
-      expect(PSQLClient.new.instance_variable_get(:@conn)).to eql(client)
+      expect(SierraDbClient.new.instance_variable_get(:@conn)).to eql(client)
     end
   end
 
@@ -31,15 +31,15 @@ describe 'PSQLClient' do
       allow($kms_client).to receive(:decrypt).with(anything())
       allow(PG).to receive(:connect).and_return client
       allow(client).to receive(:exec_params).and_return('OK response')
-      expect(PSQLClient.new.exec_query('Query')).to eql('OK response')
+      expect(SierraDbClient.new.exec_query('Query')).to eql('OK response')
     end
 
-    it 'should execute the query and raise PSQLError in case of error' do
+    it 'should execute the query and raise SierraDbError in case of error' do
       client = double()
       allow($kms_client).to receive(:decrypt).with(anything())
       allow(PG).to receive(:connect).and_return client
       allow(client).to receive(:exec_params).and_raise(StandardError)
-      expect { PSQLClient.new.exec_query('Query') }.to raise_error(PSQLError, 'Cannot execute query against db, no rows retrieved')
+      expect { SierraDbClient.new.exec_query('Query') }.to raise_error(SierraDbError, 'Cannot execute query against db, no rows retrieved')
     end
 
   end
