@@ -9,7 +9,7 @@ class PcReserve
     @data = data
     @barcode = @data["pcrUserID"]
     @patron = patron_batch[@barcode] || SafeNavigationWrapper.new(nil)
-    @id = @patron["id"] ? @patron["id"].value.to_s : nil
+    @id = @patron["id"].value ? @patron["id"].value.to_s : nil
     @sierra_batch = sierra_batch
   end
 
