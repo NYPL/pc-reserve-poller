@@ -5,7 +5,7 @@ require_relative 'lib/query_builder'
 require_relative 'lib/sierra_db_manager'
 require_relative 'lib/pc_reserve_batch'
 require_relative 'lib/state'
-require_relative 'lib/mysql_db_manager'
+require_relative 'lib/envisionware_manager'
 
 def init
   $logger = NYPLRubyUtil::NyplLogFormatter.new(STDOUT, level: ENV['LOG_LEVEL'])
@@ -39,7 +39,7 @@ def handle_event(event:, context:)
 
   # build and execute the query
   query  = QueryBuilder.from({ cr_key: cr_key })
-  response = MySQLDBManager.new.exec_query query
+  response = EnvisionwareManager.new.exec_query query
 
   # process the results in kinesis
   pc_reserve_batch = PcReserveBatch.new response
