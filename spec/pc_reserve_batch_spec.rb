@@ -53,6 +53,7 @@ describe 'PcReserveBatch' do
       pc_reserve_1 = double()
       pc_reserve_2 = double()
       pc_reserve_3 = double()
+      pc_reserve_4 = double()
       allow(PcReserve).to receive(:new).with({ "pcrUserID" => '123456789'}, @sierra_batch, @patron_batch).and_return(pc_reserve_1)
       expect(PcReserve).to receive(:new).with({ "pcrUserID" => '123456789'}, @sierra_batch, @patron_batch)
       expect(pc_reserve_1).to receive(:process)
@@ -62,6 +63,9 @@ describe 'PcReserveBatch' do
       allow(PcReserve).to receive(:new).with({ "pcrUserID" => '233333333'}, @sierra_batch, @patron_batch).and_return(pc_reserve_3)
       expect(PcReserve).to receive(:new).with({ "pcrUserID" => '233333333'}, @sierra_batch, @patron_batch)
       expect(pc_reserve_3).to receive(:process)
+      allow(PcReserve).to receive(:new).with({"pcrUserID" => '000000000'}, @sierra_batch, @patron_batch).and_return(pc_reserve_4)
+      expect(PcReserve).to receive(:new).with({"pcrUserID" => '000000000'}, @sierra_batch, @patron_batch)
+      expect(pc_reserve_4).to receive(:process)
       @pc_reserve_batch.process
     end
 
@@ -69,6 +73,7 @@ describe 'PcReserveBatch' do
       pc_reserve_1 = double()
       pc_reserve_2 = double()
       pc_reserve_3 = double()
+      pc_reserve_4 = double()
       allow(PcReserve).to receive(:new).with({ "pcrUserID" => '123456789'}, @sierra_batch, @patron_batch).and_return(pc_reserve_1)
       expect(PcReserve).to receive(:new).with({ "pcrUserID" => '123456789'}, @sierra_batch, @patron_batch)
       allow(pc_reserve_1).to receive(:process).and_raise(AvroError)
@@ -79,8 +84,11 @@ describe 'PcReserveBatch' do
       allow(PcReserve).to receive(:new).with({ "pcrUserID" => '233333333'}, @sierra_batch, @patron_batch).and_return(pc_reserve_3)
       expect(PcReserve).to receive(:new).with({ "pcrUserID" => '233333333'}, @sierra_batch, @patron_batch)
       expect(pc_reserve_3).to receive(:process)
+      allow(PcReserve).to receive(:new).with({"pcrUserID" => '000000000'}, @sierra_batch, @patron_batch).and_return(pc_reserve_4)
+      expect(PcReserve).to receive(:new).with({"pcrUserID" => '000000000'}, @sierra_batch, @patron_batch)
+      expect(pc_reserve_4).to receive(:process)
       allow($logger).to receive(:info).with("Successfully processed Record")
-      expect($logger).to receive(:info).with("Successfully processed 2 records, with 1 errors")
+      expect($logger).to receive(:info).with("Successfully processed 3 records, with 1 errors")
       @pc_reserve_batch.process
     end
 
@@ -88,6 +96,7 @@ describe 'PcReserveBatch' do
       pc_reserve_1 = double()
       pc_reserve_2 = double()
       pc_reserve_3 = double()
+      pc_reserve_4 = double()
       allow(PcReserve).to receive(:new).with({ "pcrUserID" => '123456789'}, @sierra_batch, @patron_batch).and_return(pc_reserve_1)
       expect(PcReserve).to receive(:new).with({ "pcrUserID" => '123456789'}, @sierra_batch, @patron_batch)
       allow(pc_reserve_1).to receive(:process).and_raise(NYPLError)
@@ -98,8 +107,11 @@ describe 'PcReserveBatch' do
       allow(PcReserve).to receive(:new).with({ "pcrUserID" => '233333333'}, @sierra_batch, @patron_batch).and_return(pc_reserve_3)
       expect(PcReserve).to receive(:new).with({ "pcrUserID" => '233333333'}, @sierra_batch, @patron_batch)
       expect(pc_reserve_3).to receive(:process)
+      allow(PcReserve).to receive(:new).with({"pcrUserID" => '000000000'}, @sierra_batch, @patron_batch).and_return(pc_reserve_4)
+      expect(PcReserve).to receive(:new).with({"pcrUserID" => '000000000'}, @sierra_batch, @patron_batch)
+      expect(pc_reserve_4).to receive(:process)
       allow($logger).to receive(:info).with("Successfully processed Record")
-      expect($logger).to receive(:info).with("Successfully processed 2 records, with 1 errors")
+      expect($logger).to receive(:info).with("Successfully processed 3 records, with 1 errors")
       @pc_reserve_batch.process
     end
   end
