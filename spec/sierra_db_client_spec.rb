@@ -1,5 +1,5 @@
 require_relative './spec_helper'
-require_relative '../lib/sierra_db_manager'
+require_relative '../lib/sierra_db_client'
 
 
 describe 'SierraDbClient' do

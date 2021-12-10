@@ -1,5 +1,5 @@
 require_relative './obfuscation_helper'
-require_relative './sierra_db_manager'
+require_relative './sierra_db_client'
 require_relative './safe_navigation_wrapper'
 
 class PcReserve
