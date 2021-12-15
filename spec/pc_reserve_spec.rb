@@ -5,7 +5,7 @@ require_relative '../lib/safe_navigation_wrapper'
 describe 'PcReserve' do
 
   describe '#process' do
-    before do
+    before(:each) do
       @data = {
         "pcrUserID" => "123456789",
         "pcrMinutesUsed" => "minutes",
@@ -14,8 +14,14 @@ describe 'PcReserve' do
         "pcrArea" => "area",
         "pcrUserData1" => "staff_override"
       }
-      @sierra_batch = double()
-      allow(@sierra_batch).to receive(:[]).with("1").and_return("postal_code")
+      @sierra_batch = { "1" => "postal_code" }
+
+      allow(ObfuscationHelper).to receive(:obfuscate).and_return('12345')
+      $kinesis_client = double()
+      allow($kinesis_client).to receive(:<<)
+    end
+
+    it 'should push the right data to kinesis' do
       @patron_batch = { '123456789' => SafeNavigationWrapper.new({
           'id' => '1',
           'fixedFields' => {
@@ -26,13 +32,10 @@ describe 'PcReserve' do
             'pcode3' => 'p',
           }
       })}
-      allow(ObfuscationHelper).to receive(:obfuscate).and_return('12345')
-      @pc_reserve = PcReserve.new(@data, @sierra_batch, @patron_batch)
-      $kinesis_client = double()
-      allow($kinesis_client).to receive(:<<)
-    end
 
-    it 'should push the right data to kinesis' do
+
+      @pc_reserve = PcReserve.new(@data, @sierra_batch, @patron_batch)
+
       expect($kinesis_client).to receive(:<<).with({
           patron_id: '12345',
           ptype_code: 2,
@@ -48,6 +51,32 @@ describe 'PcReserve' do
           staff_override: "staff_override"
       })
       @pc_reserve.process
+    end
+
+    it 'should fall back to defaults for missing patron' do
+
+      @patron_batch = {}
+
+
+      @pc_reserve = PcReserve.new(@data, @sierra_batch, @patron_batch)
+
+      expect($kinesis_client).to receive(:<<).with({
+        :area=>"area",
+        :branch=>"branch",
+        :geoid=>nil,
+        :key=>"12345",
+        :minutes_used=>"minutes",
+        :patron_home_library_code=>nil,
+        :patron_id=>nil,
+        :pcode3=>nil,
+        :postal_code=>nil,
+        :ptype_code=>nil,
+        :staff_override=>"staff_override",
+        :transaction_et=>"2021-01-01"
+      })
+
+      @pc_reserve.process
+
     end
   end
 

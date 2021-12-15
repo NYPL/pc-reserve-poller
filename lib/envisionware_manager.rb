@@ -3,7 +3,7 @@ require 'mysql2'
 # Client for managing connections to a MySQL database (in our case, the Envisionware DB)
 # Currently exposes a single method that allows executing an arbitraty query
 
-class MySQLDBManager
+class EnvisionwareManager
 
   def initialize
     @client = Mysql2::Client.new(
@@ -23,10 +23,10 @@ class MySQLDBManager
           @client.query query
       rescue StandardError => e
           $logger.error 'Unable to query envisionware db', { message: e.message }
-          raise MySQLDBManagerError, 'Cannot execute query against db, no rows retrieved'
+          raise EnvisionwareManagerError, 'Cannot execute query against db, no rows retrieved'
       end
   end
 
 end
 
-class MySQLDBManagerError < StandardError; end
+class EnvisionwareManagerError < StandardError; end

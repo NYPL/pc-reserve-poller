@@ -19,8 +19,7 @@ class PcReserveBatch
     @patron_batch = Batcher.from(PatronBatch, @barcodes)
     @sierra_batch = Batcher.from(SierraBatch, @patron_batch.values.map { |patron| patron["id"].value })
 
-    matched_responses = db_response.filter { |row| @patron_batch[row["pcrUserID"]] }
-    matched_responses.each do |row|
+    db_response.each do |row|
       begin
         $logger.debug("Processing row #{row}")
         pc_reserve = PcReserve.new row, @sierra_batch, @patron_batch

@@ -69,7 +69,7 @@ describe 'PatronBatch' do
 
   describe '#batch_size' do
     it 'should get the configured batch size' do
-      expect(PatronBatch.batch_size).to eql('123')
+      expect(PatronBatch.batch_size).to eql(123)
     end
   end
 

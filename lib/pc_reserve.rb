@@ -1,5 +1,6 @@
 require_relative './obfuscation_helper'
-require_relative './pg_manager'
+require_relative './sierra_db_client'
+require_relative './safe_navigation_wrapper'
 
 class PcReserve
   attr_accessor :event, :data, :patron
@@ -7,8 +8,8 @@ class PcReserve
   def initialize (data, sierra_batch, patron_batch)
     @data = data
     @barcode = @data["pcrUserID"]
-    @patron = patron_batch[@barcode]
-    @id = @patron["id"].value.to_s
+    @patron = patron_batch[@barcode] || SafeNavigationWrapper.new(nil)
+    @id = @patron["id"].value ? @patron["id"].value.to_s : nil
     @sierra_batch = sierra_batch
   end
 
@@ -16,17 +17,19 @@ class PcReserve
   # Use the PatronService to convert it to a patronId.
   # Apply bcrypt obfuscation documented with samples here and implemented in Java here.
   def patron_id
-    ObfuscationHelper.obfuscate @id
+    @id ? ObfuscationHelper.obfuscate(@id) : nil
   end
 
   #  ptype_code: Using patron record already fetched, evaluate fixedFields[“47”][“value”]
   def ptype_code
-    patron["fixedFields"]["47"]["value"].value.to_i
+    code = patron["fixedFields"]["47"]["value"].value
+    code ? code.to_i : nil
   end
 
   #  patron_home_library_code: Using patron record already fetched, evaluate fixedFields[“53”][“value”]. Trim whitespace.
   def patron_home_library_code
-    patron["fixedFields"]["53"]["value"].value.strip
+    code = patron["fixedFields"]["53"]["value"].value
+    code ? code.strip : nil
   end
 
   #  pcode3: Using patron record already fetched, evaluate patronCodes[“pcode3”].

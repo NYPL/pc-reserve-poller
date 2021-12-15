@@ -1,8 +1,8 @@
 require_relative './spec_helper'
-require_relative '../lib/mysql_db_manager'
+require_relative '../lib/envisionware_manager'
 
 
-describe 'MySQLDBManager' do
+describe 'EnvisionwareManager' do
   before(:each) do
     $kms_client = double()
   end
@@ -20,7 +20,7 @@ describe 'MySQLDBManager' do
           password: 'decrypted_password'
         }).and_return(client)
 
-      expect(MySQLDBManager.new.instance_variable_get(:@client)).to eql(client)
+      expect(EnvisionwareManager.new.instance_variable_get(:@client)).to eql(client)
     end
   end
 
@@ -31,18 +31,18 @@ describe 'MySQLDBManager' do
       allow($kms_client).to receive(:decrypt).with(anything())
       allow(Mysql2::Client).to receive(:new).and_return(client)
       allow(client).to receive(:query).and_return('OK response')
-      expect(MySQLDBManager.new.exec_query('Query')).to eql('OK response')
+      expect(EnvisionwareManager.new.exec_query('Query')).to eql('OK response')
     end
 
-    it 'should execute the query and raise MySQLDBManagerError in case of error' do
+    it 'should execute the query and raise EnvisionwareManagerError in case of error' do
       client = double()
       allow($kms_client).to receive(:decrypt).with(anything())
       allow(Mysql2::Client).to receive(:new).and_return(client)
       allow(client).to receive(:query).and_raise(StandardError)
       expect {
-          db_manager = MySQLDBManager.new
+          db_manager = EnvisionwareManager.new
           db_manager.exec_query('Query')
-      }.to raise_error(MySQLDBManagerError, 'Cannot execute query against db, no rows retrieved')
+      }.to raise_error(EnvisionwareManagerError, 'Cannot execute query against db, no rows retrieved')
     end
 
   end

@@ -2,7 +2,7 @@ require 'pg'
 
 # Client for managing connections to the PostgreSQL database
 # Currently exposes a single method that allows executing an arbitraty query
-class PSQLClient
+class SierraDbClient
     def initialize
         @conn = PG.connect(
             host: ENV['SIERRA_DB_HOST'],
@@ -21,9 +21,9 @@ class PSQLClient
             @conn.exec_params query
         rescue StandardError => e
             $logger.error 'Unable to query db', { message: e.message }
-            raise PSQLError, 'Cannot execute query against db, no rows retrieved'
+            raise SierraDbError, 'Cannot execute query against db, no rows retrieved'
         end
     end
 end
 
-class PSQLError < StandardError; end
+class SierraDbError < StandardError; end

@@ -12,9 +12,9 @@ class SierraBatch
         " FROM sierra_view.patron_view LEFT OUTER JOIN sierra_view.patron_record_address ON patron_record_address.patron_record_id=patron_view.id" +
         " WHERE patron_view.record_num IN (#{@ids.join(",")});"
 
-      $pg_manager.exec_query query
+      $sierra_db_client.exec_query query
 
-    rescue PSQLError => e
+    rescue SierraDbError => e
       $logger.error "Error fetching Sierra Batch #{@ids}"
       []
     end
@@ -29,7 +29,7 @@ class SierraBatch
   end
 
   def self.batch_size
-    ENV['SIERRA_BATCH_SIZE']
+    ENV['SIERRA_BATCH_SIZE'].to_i
   end
 
 
