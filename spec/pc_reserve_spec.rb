@@ -12,26 +12,42 @@ describe 'PcReserve' do
         "pcrDateTime" => Date.new(2021, 1, 1),
         "pcrBranch" => "branch",
         "pcrArea" => "area",
-        "pcrUserData1" => "staff_override"
+        "pcrUserData1" => "staff_override",
+        "pcrKey" => "aaaaa"
       }
       @sierra_batch = { "1" => "postal_code" }
 
-      allow(ObfuscationHelper).to receive(:obfuscate).and_return('12345')
+      # allow(ObfuscationHelper).to receive(:obfuscate).and_return('12345')
+      allow(ObfuscationHelper).to receive(:obfuscate) do |arg|
+        if arg.start_with? 'barcode'
+          '6789'
+        else
+          '12345'
+        end
+      end
+
       $kinesis_client = double()
       allow($kinesis_client).to receive(:<<)
+      @patron_batch = double()
+
+      allow(@patron_batch).to receive(:[]).with('123456789').and_return (SafeNavigationWrapper.new({
+        'id' => '1',
+        'fixedFields' => {
+          '47' => { 'value' => '2'},
+          '53' => { 'value' => 'library_code    '},
+        },
+        'patronCodes' => {
+          'pcode3' => 'p',
+        },
+        'status' => 'found'
+      }))
+
+      allow(@patron_batch).to receive(:[]).with('255556789').and_return (SafeNavigationWrapper.new({
+          'status' => 'guest_pass'
+      }))
     end
 
     it 'should push the right data to kinesis' do
-      @patron_batch = { '123456789' => SafeNavigationWrapper.new({
-          'id' => '1',
-          'fixedFields' => {
-            '47' => { 'value' => '2'},
-            '53' => { 'value' => 'library_code    '},
-          },
-          'patronCodes' => {
-            'pcode3' => 'p',
-          }
-      })}
 
 
       @pc_reserve = PcReserve.new(@data, @sierra_batch, @patron_batch)
@@ -48,17 +64,26 @@ describe 'PcReserve' do
           transaction_et: "2021-01-01" ,
           branch: "branch",
           area: "area",
-          staff_override: "staff_override"
+          staff_override: "staff_override",
+          patron_status: "found"
       })
       @pc_reserve.process
     end
 
     it 'should fall back to defaults for missing patron' do
 
-      @patron_batch = {}
+      @missing_data = {
+        "pcrUserID" => "255556789",
+        "pcrMinutesUsed" => "minutes",
+        "pcrDateTime" => Date.new(2021, 1, 1),
+        "pcrBranch" => "branch",
+        "pcrArea" => "area",
+        "pcrUserData1" => "staff_override",
+        "pcrKey" => "aaaaa"
+      }
 
 
-      @pc_reserve = PcReserve.new(@data, @sierra_batch, @patron_batch)
+      @pc_reserve = PcReserve.new(@missing_data, @sierra_batch, @patron_batch)
 
       expect($kinesis_client).to receive(:<<).with({
         :area=>"area",
@@ -67,12 +92,13 @@ describe 'PcReserve' do
         :key=>"12345",
         :minutes_used=>"minutes",
         :patron_home_library_code=>nil,
-        :patron_id=>nil,
+        :patron_id=>"6789",
         :pcode3=>nil,
         :postal_code=>nil,
         :ptype_code=>nil,
         :staff_override=>"staff_override",
-        :transaction_et=>"2021-01-01"
+        :transaction_et=>"2021-01-01",
+        :patron_status => "guest_pass"
       })
 
       @pc_reserve.process

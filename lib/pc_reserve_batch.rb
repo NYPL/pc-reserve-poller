@@ -11,7 +11,6 @@ class PcReserveBatch
 
   def initialize (db_response)
     @db_response = db_response
-    @process_statuses = { :success => 0, :error => 0 }
     @barcodes = db_response.map { |row| row["pcrUserID"] } # the pcrUserID is a barcode
   end
 
@@ -24,21 +23,19 @@ class PcReserveBatch
         $logger.debug("Processing row #{row}")
         pc_reserve = PcReserve.new row, @sierra_batch, @patron_batch
         pc_reserve.process
-      rescue AvroError => e
-        $logger.warn "Failed avro validation for row #{row}", { :status => e.message }
-        @process_statuses[:error] += 1
-        next
-      rescue NYPLError => e
-        $logger.warn "Record failed to write to kinesis", { :status => e.message }
-        @process_statuses[:error] += 1
+      rescue StandardError => e
+        $logger.error("Error pushing pc reservation to Kinesis: #{e.message}")
         next
       end
-
-      $logger.info "Successfully processed Record"
-      @process_statuses[:success] += 1
     end
 
-    $logger.info "Successfully processed #{process_statuses[:success]} records, with #{process_statuses[:error]} errors"
+    begin
+      $kinesis_client.push_records
+    rescue StandardError => e
+      $logger.error("Error pushing pc reservations to Kinesis: #{e.message}")
+    end
+
+    $logger.info "Finished processing records"
   end
 
 
