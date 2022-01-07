@@ -86,7 +86,7 @@ class PcReserve
     data["pcrUserData1"]
   end
 
-  def patron_status
+  def patron_retrieval_status
     @patron["status"].value
   end
 
@@ -104,7 +104,7 @@ class PcReserve
         :branch,
         :area,
         :staff_override,
-        :patron_status
+        :patron_retrieval_status
       ]
       self.event = fields.map {|field| [ field, self.send(field) ]}.to_h
   end

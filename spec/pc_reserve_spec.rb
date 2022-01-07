@@ -65,7 +65,7 @@ describe 'PcReserve' do
           branch: "branch",
           area: "area",
           staff_override: "staff_override",
-          patron_status: "found"
+          patron_retrieval_status: "found"
       })
       @pc_reserve.process
     end
@@ -98,7 +98,7 @@ describe 'PcReserve' do
         :ptype_code=>nil,
         :staff_override=>"staff_override",
         :transaction_et=>"2021-01-01",
-        :patron_status => "guest_pass"
+        :patron_retrieval_status => "guest_pass"
       })
 
       @pc_reserve.process
