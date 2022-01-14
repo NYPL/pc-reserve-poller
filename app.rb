@@ -13,6 +13,7 @@ def init
   $kinesis_client = NYPLRubyUtil::KinesisClient.new({
         :schema_string => ENV['SCHEMA_TYPE'],
         :stream_name => ENV['KINESIS_STREAM'],
+        :batch_size => ENV['KINESIS_BATCH_SIZE'],
         :partition_key => 'id' }
     )
 

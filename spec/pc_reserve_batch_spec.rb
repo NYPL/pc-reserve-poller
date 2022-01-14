@@ -31,6 +31,8 @@ describe 'PcReserveBatch' do
       @sierra_batch = double()
       allow(Batcher).to receive(:from).with(SierraBatch, @expected_patron_ids).and_return(@sierra_batch)
       @pc_reserve_batch = PcReserveBatch.new (@db_response)
+      $kinesis_client = double()
+      allow($kinesis_client).to receive(:push_records)
     end
 
     it 'should build a patron batch' do
@@ -87,8 +89,8 @@ describe 'PcReserveBatch' do
       allow(PcReserve).to receive(:new).with({"pcrUserID" => '000000000'}, @sierra_batch, @patron_batch).and_return(pc_reserve_4)
       expect(PcReserve).to receive(:new).with({"pcrUserID" => '000000000'}, @sierra_batch, @patron_batch)
       expect(pc_reserve_4).to receive(:process)
-      allow($logger).to receive(:info).with("Successfully processed Record")
-      expect($logger).to receive(:info).with("Successfully processed 3 records, with 1 errors")
+      allow($logger).to receive(:info).with("Finished processing records")
+      expect($logger).to receive(:info).with("Finished processing records")
       @pc_reserve_batch.process
     end
 
@@ -110,8 +112,8 @@ describe 'PcReserveBatch' do
       allow(PcReserve).to receive(:new).with({"pcrUserID" => '000000000'}, @sierra_batch, @patron_batch).and_return(pc_reserve_4)
       expect(PcReserve).to receive(:new).with({"pcrUserID" => '000000000'}, @sierra_batch, @patron_batch)
       expect(pc_reserve_4).to receive(:process)
-      allow($logger).to receive(:info).with("Successfully processed Record")
-      expect($logger).to receive(:info).with("Successfully processed 3 records, with 1 errors")
+      allow($logger).to receive(:info).with("Finished processing records")
+      expect($logger).to receive(:info).with("Finished processing records")
       @pc_reserve_batch.process
     end
   end
