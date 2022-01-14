@@ -4,49 +4,60 @@ require_relative '../lib/patron_batch'
 describe 'PatronBatch' do
 
   describe '#initialize' do
-    it 'should set @barcode and @platform_client when initialized' do \
-      barcodes = double()
+    it 'should store valid barcodes and platform_client when initialized' do
+      barcodes = ['12345']
       platform_client = double()
       allow(NYPLRubyUtil::PlatformApiClient).to receive(:new).and_return(platform_client)
       patron_batch = PatronBatch.new(barcodes)
-      expect(patron_batch.instance_variable_get(:@barcodes)).to eql(barcodes)
+      expect(patron_batch.instance_variable_get(:@barcodes)).to eql(['12345'])
       expect(patron_batch.instance_variable_get(:@platform_client)).to eql(platform_client)
     end
   end
 
   describe '#get_resp' do
     before(:each) do
-      @barcodes = double()
       @platform_client = double()
       allow(NYPLRubyUtil::PlatformApiClient).to receive(:new).and_return(@platform_client)
-      @patron_batch = PatronBatch.new(@barcodes)
     end
 
     it 'should make correct query to patron endpoint' do
-      allow(@barcodes).to receive(:join).and_return('1')
-      allow(@barcodes).to receive(:first).and_return('1')
-      expect(@platform_client).to receive(:get).with('http://www.fake_patron.com?barcode=1')
+      @barcodes = ['12345']
+      @patron_batch = PatronBatch.new(@barcodes)
+      expect(@platform_client).to receive(:get).with('http://www.fake_patron.com?barcode=12345')
+      @patron_batch.get_resp
+    end
+
+    it 'should skip query to patron endpoint in case of invalid barcode' do
+      @barcodes = ['25555']
+      @patron_batch = PatronBatch.new(@barcodes)
       @patron_batch.get_resp
     end
 
     it 'should return array of barcode, row pairs in case of successful db query' do
-      allow(@barcodes).to receive(:join).and_return('1')
-      allow(@barcodes).to receive(:first).and_return('1')
-      allow(@platform_client).to receive(:get).with('http://www.fake_patron.com?barcode=1').and_return({ "data" => [{ a: 'b', c: 'd'}]})
-      expect(@patron_batch.get_resp).to eql([{ barcode: '1', row: { a: 'b', c: 'd'} }])
+      @barcodes = ['12345']
+      @patron_batch = PatronBatch.new(@barcodes)
+      allow(@platform_client).to receive(:get).with('http://www.fake_patron.com?barcode=12345')
+        .and_return({ "data" => [{ a: 'b', c: 'd'}]})
+      expect(@patron_batch.get_resp).to eql([{ barcode: '12345', row: { a: 'b', c: 'd', "status" => "found"} }])
     end
 
-    it 'should return [] in case of errors' do
-      allow(@barcodes).to receive(:join).and_return('1')
-      allow(@barcodes).to receive(:first).and_return('1')
-      allow(@platform_client).to receive(:get).with('http://www.fake_patron.com?barcode=1').and_raise StandardError
-      expect(@patron_batch.get_resp).to eql([])
+    it 'should indicate missing in case of errors' do
+      allow(@platform_client).to receive(:get).with('http://www.fake_patron.com?barcode=12345').and_raise StandardError
+      @barcodes = ['12345']
+      @patron_batch = PatronBatch.new(@barcodes)
+      expect(@patron_batch.get_resp).to eql({ barcode: '12345', row: { "status" => "missing" } })
+    end
+
+    it 'should indicate guest pass in case of guest pass' do
+      @barcodes = ['25555']
+      @patron_batch = PatronBatch.new(@barcodes)
+      expect(@patron_batch.get_resp).to eql({ barcode: '25555', row: { "status" => "guest_pass" } })
     end
   end
 
   describe '#match_to_ids' do
     before(:each) do
-      @barcodes = double()
+      @barcodes = ['12345']
       @platform_client = double()
       allow(NYPLRubyUtil::PlatformApiClient).to receive(:new).and_return(@platform_client)
       @patron_batch = PatronBatch.new(@barcodes)

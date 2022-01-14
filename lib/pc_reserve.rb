@@ -11,13 +11,14 @@ class PcReserve
     @patron = patron_batch[@barcode] || SafeNavigationWrapper.new(nil)
     @id = @patron["id"].value ? @patron["id"].value.to_s : nil
     @sierra_batch = sierra_batch
+    @patron_batch = patron_batch
   end
 
   #  patron_id: Interpret pcrUserID as a patron barcode.
   # Use the PatronService to convert it to a patronId.
   # Apply bcrypt obfuscation documented with samples here and implemented in Java here.
   def patron_id
-    @id ? ObfuscationHelper.obfuscate(@id) : nil
+    ObfuscationHelper.obfuscate(@id || "barcode #{@barcode}")
   end
 
   #  ptype_code: Using patron record already fetched, evaluate fixedFields[“47”][“value”]
@@ -85,6 +86,10 @@ class PcReserve
     data["pcrUserData1"]
   end
 
+  def patron_retrieval_status
+    @patron["status"].value
+  end
+
   def build_event_from_data
       fields = [
         :patron_id,
@@ -99,6 +104,7 @@ class PcReserve
         :branch,
         :area,
         :staff_override,
+        :patron_retrieval_status
       ]
       self.event = fields.map {|field| [ field, self.send(field) ]}.to_h
   end
