@@ -7,19 +7,29 @@ require_relative 'lib/pc_reserve_batch'
 require_relative 'lib/state'
 require_relative 'lib/envisionware_manager'
 
+def load_env_vars
+  config = File.readlines("./env_files/#{ENV["ENVIRONMENT"]}_env")
+  config.each do |line|
+    key_value_pair = line.split("=")
+    ENV[key_value_pair[0]] = key_value_pair[1].chomp
+  end
+end
+
 def init
+  load_env_vars
   $logger = NYPLRubyUtil::NyplLogFormatter.new(STDOUT, level: ENV['LOG_LEVEL'])
 
   $kinesis_client = NYPLRubyUtil::KinesisClient.new({
         :schema_string => ENV['SCHEMA_TYPE'],
         :stream_name => ENV['KINESIS_STREAM'],
         :partition_key => 'id' }
-    )
+  )
 
-  $kms_client = ENV['APP_ENV'] == 'local' ?
-      NYPLRubyUtil::KmsClient.new(
-        { profile: ENV['AWS_PROFILE'] }
-      ) : NYPLRubyUtil::KmsClient.new
+  $kms_client = NYPLRubyUtil::KmsClient.new(
+    ENV['AWS_PROFILE'] ?
+      { profile: ENV['AWS_PROFILE'] } :
+      { access_key_id: ENV['AWS_ACCESS_KEY_ID'], secret_access_key: ENV['AWS_SECRET_ACCESS_KEY'] }
+  )
 
   $sierra_db_client = SierraDbClient.new
 
