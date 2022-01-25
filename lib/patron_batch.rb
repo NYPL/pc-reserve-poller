@@ -17,7 +17,7 @@ class PatronBatch
 
     # these are guest passes and will not match anything in the patron db:
     if barcode.start_with? '25555'
-      return { barcode: barcode, row: { "status" => "guest_pass"} }
+      return [{ barcode: barcode, row: { "status" => "guest_pass"} }]
     end
 
     begin
@@ -25,7 +25,7 @@ class PatronBatch
       resp["data"].map {|row| { barcode: barcode, row: row.merge({ "status" => "found" }) }}
     rescue StandardError => e
       $logger.error("Failed to fetch patron data for ids #{@barcodes}")
-      { barcode: barcode, row: { "status" => "missing" } }
+      [{ barcode: barcode, row: { "status" => "missing" } }]
     end
   end
 

@@ -4,6 +4,8 @@ ADD . /src
 
 WORKDIR /src
 
+RUN bundle lock
+RUN bundle config set deployment 'true'
 RUN bundle install
 
-CMD ["./index.rb"]
+CMD ["bundle",  "exec",  "./index.rb"]

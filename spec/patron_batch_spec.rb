@@ -45,13 +45,13 @@ describe 'PatronBatch' do
       allow(@platform_client).to receive(:get).with('http://www.fake_patron.com?barcode=12345').and_raise StandardError
       @barcodes = ['12345']
       @patron_batch = PatronBatch.new(@barcodes)
-      expect(@patron_batch.get_resp).to eql({ barcode: '12345', row: { "status" => "missing" } })
+      expect(@patron_batch.get_resp).to eql([{ barcode: '12345', row: { "status" => "missing" } }])
     end
 
     it 'should indicate guest pass in case of guest pass' do
       @barcodes = ['25555']
       @patron_batch = PatronBatch.new(@barcodes)
-      expect(@patron_batch.get_resp).to eql({ barcode: '25555', row: { "status" => "guest_pass" } })
+      expect(@patron_batch.get_resp).to eql([{ barcode: '25555', row: { "status" => "guest_pass" } }])
     end
   end
 

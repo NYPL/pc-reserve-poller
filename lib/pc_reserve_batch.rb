@@ -15,8 +15,15 @@ class PcReserveBatch
   end
 
   def process
+    $logger.debug("Patron Batch for #{@barcodes}")
     @patron_batch = Batcher.from(PatronBatch, @barcodes)
-    @sierra_batch = Batcher.from(SierraBatch, @patron_batch.values.map { |patron| patron["id"].value })
+    patrons_missing_ids = @patron_batch.keys.select {|patron_key| !@patron_batch[patron_key]["id"] }
+    if !patrons_missing_ids.empty?
+      $logger.warn("Patrons missing ids #{patrons_missing_ids}")
+    end
+    patron_ids = @patron_batch.values.map { |patron| patron["id"].value }
+    $logger.debug("Sierra Batch for #{patron_ids}")
+    @sierra_batch = Batcher.from(SierraBatch, patron_ids.compact)
 
     db_response.each do |row|
       begin

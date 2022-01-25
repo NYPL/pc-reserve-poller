@@ -1,4 +1,4 @@
-require 'nypl_ruby_util'
+require "nypl_ruby_util"
 
 require_relative 'lib/state_manager'
 require_relative 'lib/query_builder'
@@ -20,9 +20,14 @@ def init
   $logger = NYPLRubyUtil::NyplLogFormatter.new(STDOUT, level: ENV['LOG_LEVEL'])
 
   $kinesis_client = NYPLRubyUtil::KinesisClient.new({
+        :custom_aws_config => {
+          region: ENV['S3_AWS_REGION'],
+          access_key_id: ENV['AWS_ACCESS_KEY_ID'],
+          secret_access_key: ENV['AWS_SECRET_ACCESS_KEY']
+        },
         :schema_string => ENV['SCHEMA_TYPE'],
         :stream_name => ENV['KINESIS_STREAM'],
-        :batch_size => ENV['KINESIS_BATCH_SIZE'],
+        :batch_size => ENV['KINESIS_BATCH_SIZE'].to_i,
         :partition_key => 'id' }
   )
 

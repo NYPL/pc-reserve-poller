@@ -39,6 +39,7 @@ ENV['SIERRA_DB_NAME'] = 'fake_sierra_name'
 ENV['SIERRA_DB_USER'] = 'fake_sierra_user'
 ENV['SIERRA_DB_PSWD'] = 'fake_sierra_password'
 ENV['SIERRA_BATCH_SIZE'] = '1'
+ENV['ENVIRONMENT'] = 'spec'
 $logger = Irrelevant.new
 $kms_client = Irrelevant.new
 

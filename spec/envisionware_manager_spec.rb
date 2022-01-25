@@ -12,8 +12,9 @@ describe 'EnvisionwareManager' do
       client = double()
       allow($kms_client).to receive(:decrypt).with('fake_envisionware_user').and_return('decrypted_user')
       allow($kms_client).to receive(:decrypt).with('fake_envisionware_password').and_return('decrypted_password')
+      allow($kms_client).to receive(:decrypt).with('fake_envisionware_host').and_return('decrypted_host')
       allow(Mysql2::Client).to receive(:new).with({
-          host: 'fake_envisionware_host',
+          host: 'decrypted_host',
           port: 'fake_envisionware_port',
           database: 'fake_envisionware_name',
           username: 'decrypted_user',
