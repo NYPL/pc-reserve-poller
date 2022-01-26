@@ -5,7 +5,7 @@ require 'pg'
 class SierraDbClient
     def initialize
         @conn = PG.connect(
-            host: ENV['SIERRA_DB_HOST'],
+            host: $kms_client.decrypt(ENV['SIERRA_DB_HOST']),
             port: ENV['SIERRA_DB_PORT'],
             dbname: ENV['SIERRA_DB_NAME'],
             user: $kms_client.decrypt(ENV['SIERRA_DB_USER']),

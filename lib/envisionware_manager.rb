@@ -7,7 +7,7 @@ class EnvisionwareManager
 
   def initialize
     @client = Mysql2::Client.new(
-      host: ENV['ENVISIONWARE_HOST'],
+      host: $kms_client.decrypt(ENV['ENVISIONWARE_HOST']),
       port: ENV['ENVISIONWARE_PORT'],
       database: ENV['ENVISIONWARE_NAME'],
       username: $kms_client.decrypt(ENV['ENVISIONWARE_USER']),

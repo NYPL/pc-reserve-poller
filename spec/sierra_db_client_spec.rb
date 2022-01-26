@@ -13,8 +13,9 @@ describe 'SierraDbClient' do
       client = double()
       allow($kms_client).to receive(:decrypt).with('fake_sierra_user').and_return('decrypted_user')
       allow($kms_client).to receive(:decrypt).with('fake_sierra_password').and_return('decrypted_password')
+      allow($kms_client).to receive(:decrypt).with('fake_sierra_host').and_return('decrypted_host')
       allow(PG).to receive(:connect).with({
-        host: 'fake_sierra_host',
+        host: 'decrypted_host',
         port: 'fake_sierra_port',
         dbname: 'fake_sierra_name',
         user: 'decrypted_user',
