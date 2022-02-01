@@ -23,6 +23,11 @@ docker image build  -t pc-reserve-poller:latest .
 ```
 docker container run -v ~/.aws/credentials:/root/.aws/credentials:ro --env-file env_files/local_env pc-reserve-poller:latest
 ```
+- To update, follow the instructions on AWS and then run
+
+```
+aws ecs update-service --cluster pc-reserve-poller-qa --service pc-reserve-poller-app-qa --force-new-deployment --profile nypl-digital-dev
+```
 
 CONTRIBUTING
 

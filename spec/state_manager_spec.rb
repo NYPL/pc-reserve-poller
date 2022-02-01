@@ -35,7 +35,7 @@ describe StateManager do
 
     it 'should query the correct endpoint' do
       allow(Net::HTTP).to receive(:get_response).and_return(success_response)
-      expect(Net::HTTP).to receive(:get_response).with(URI("#{ENV['S3_BASE_URL']}/#{ENV['BUCKET_NAME']}/#{ENV['SCHEMA_TYPE'].downcase}_poller_status.json"))
+      expect(Net::HTTP).to receive(:get_response).with(URI("#{ENV['S3_BASE_URL']}/#{ENV['S3_RESOURCE']}"))
       StateManager.fetch_current_state
     end
 

@@ -27,7 +27,8 @@ class State
   end
 
   def self.extract_state_from_db_response (db_response)
-    { "cr_key" => db_response.last["pcrKey"] }
+    last_element = db_response.lazy.drop(db_response.count  - 1).first
+    { "cr_key" => last_element["pcrKey"] }
   end
 
   def self.extract_state_from_s3_response (s3_response)

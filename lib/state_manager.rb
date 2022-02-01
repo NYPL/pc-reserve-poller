@@ -15,7 +15,7 @@ class StateManager
     def self.fetch_current_state
         # Fetch JSON object from S3
         begin
-            status_uri = URI("#{ENV['S3_BASE_URL']}/#{ENV['BUCKET_NAME']}/#{ENV['SCHEMA_TYPE'].downcase}_poller_status.json")
+            status_uri = URI("#{ENV['S3_BASE_URL']}/#{ENV['S3_RESOURCE']}")
             $logger.debug "Fetching state from #{status_uri}"
             response = Net::HTTP.get_response(status_uri)
         rescue Exception => e
@@ -47,7 +47,7 @@ class StateManager
             resp = s3.put_object({
                 :body => state_json,
                 :bucket => ENV['BUCKET_NAME'],
-                :key => "#{ENV['SCHEMA_TYPE'].downcase}_poller_status.json",
+                :key => ENV['S3_RESOURCE'],
                 :acl => "public-read"
             })
         rescue Exception => e
