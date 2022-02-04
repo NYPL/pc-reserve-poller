@@ -15,23 +15,23 @@ class PcReserveBatch
   end
 
   def process
-    $logger.debug("Patron Batch for #{@barcodes}")
+    $logger.debug("#{$batch_id} Patron Batch for #{@barcodes}")
     @patron_batch = Batcher.from(PatronBatch, @barcodes)
     patrons_missing_ids = @patron_batch.keys.select {|patron_key| !@patron_batch[patron_key]["id"] }
     if !patrons_missing_ids.empty?
-      $logger.warn("Patrons missing ids #{patrons_missing_ids}")
+      $logger.warn("#{$batch_id} Patrons missing ids #{patrons_missing_ids}")
     end
     patron_ids = @patron_batch.values.map { |patron| patron["id"].value }
-    $logger.debug("Sierra Batch for #{patron_ids}")
+    $logger.debug("#{$batch_id} Sierra Batch for #{patron_ids}")
     @sierra_batch = Batcher.from(SierraBatch, patron_ids.compact)
 
     db_response.each do |row|
       begin
-        $logger.debug("Processing row #{row}")
+        $logger.debug("#{$batch_id} Processing row #{row}")
         pc_reserve = PcReserve.new row, @sierra_batch, @patron_batch
         pc_reserve.process
       rescue StandardError => e
-        $logger.error("Error pushing pc reservation to Kinesis: #{e.message}")
+        $logger.error("#{$batch_id} Error pushing pc reservation to Kinesis: #{e.message}")
         next
       end
     end
@@ -39,10 +39,10 @@ class PcReserveBatch
     begin
       $kinesis_client.push_records
     rescue StandardError => e
-      $logger.error("Error pushing pc reservations to Kinesis: #{e.message}")
+      $logger.error("#{$batch_id} Error pushing pc reservations to Kinesis: #{e.message}")
     end
 
-    $logger.info "Finished processing records"
+    $logger.info "#{$batch_id} Finished processing records"
   end
 
 

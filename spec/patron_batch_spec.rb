@@ -23,7 +23,7 @@ describe 'PatronBatch' do
     it 'should make correct query to patron endpoint' do
       @barcodes = ['12345']
       @patron_batch = PatronBatch.new(@barcodes)
-      expect(@platform_client).to receive(:get).with('http://www.fake_patron.com?barcode=12345')
+      expect(@platform_client).to receive(:get).with('http://www.fake_patron.com?fields=id,barcodes,fixedFields,patronCodes&barcode=12345')
       @patron_batch.get_resp
     end
 
@@ -36,13 +36,13 @@ describe 'PatronBatch' do
     it 'should return array of barcode, row pairs in case of successful db query' do
       @barcodes = ['12345']
       @patron_batch = PatronBatch.new(@barcodes)
-      allow(@platform_client).to receive(:get).with('http://www.fake_patron.com?barcode=12345')
+      allow(@platform_client).to receive(:get).with('http://www.fake_patron.com?fields=id,barcodes,fixedFields,patronCodes&barcode=12345')
         .and_return({ "data" => [{ a: 'b', c: 'd'}]})
       expect(@patron_batch.get_resp).to eql([{ barcode: '12345', row: { a: 'b', c: 'd', "status" => "found"} }])
     end
 
     it 'should indicate missing in case of errors' do
-      allow(@platform_client).to receive(:get).with('http://www.fake_patron.com?barcode=12345').and_raise StandardError
+      allow(@platform_client).to receive(:get).with('http://www.fake_patron.com?fields=id,barcodes,fixedFields,patronCodes&barcode=12345').and_raise StandardError
       @barcodes = ['12345']
       @patron_batch = PatronBatch.new(@barcodes)
       expect(@patron_batch.get_resp).to eql([{ barcode: '12345', row: { "status" => "missing" } }])

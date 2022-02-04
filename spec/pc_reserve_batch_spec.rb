@@ -89,8 +89,8 @@ describe 'PcReserveBatch' do
       allow(PcReserve).to receive(:new).with({"pcrUserID" => '000000000'}, @sierra_batch, @patron_batch).and_return(pc_reserve_4)
       expect(PcReserve).to receive(:new).with({"pcrUserID" => '000000000'}, @sierra_batch, @patron_batch)
       expect(pc_reserve_4).to receive(:process)
-      allow($logger).to receive(:info).with("Finished processing records")
-      expect($logger).to receive(:info).with("Finished processing records")
+      allow($logger).to receive(:info).with(/Finished processing records/)
+      expect($logger).to receive(:info).with(/Finished processing records/)
       @pc_reserve_batch.process
     end
 
@@ -112,8 +112,8 @@ describe 'PcReserveBatch' do
       allow(PcReserve).to receive(:new).with({"pcrUserID" => '000000000'}, @sierra_batch, @patron_batch).and_return(pc_reserve_4)
       expect(PcReserve).to receive(:new).with({"pcrUserID" => '000000000'}, @sierra_batch, @patron_batch)
       expect(pc_reserve_4).to receive(:process)
-      allow($logger).to receive(:info).with("Finished processing records")
-      expect($logger).to receive(:info).with("Finished processing records")
+      allow($logger).to receive(:info).with(/Finished processing records/)
+      expect($logger).to receive(:info).with(/Finished processing records/)
       @pc_reserve_batch.process
     end
   end

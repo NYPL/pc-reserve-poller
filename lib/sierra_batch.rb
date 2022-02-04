@@ -12,10 +12,12 @@ class SierraBatch
         " FROM sierra_view.patron_view LEFT OUTER JOIN sierra_view.patron_record_address ON patron_record_address.patron_record_id=patron_view.id" +
         " WHERE patron_view.record_num IN (#{@ids.join(",")});"
 
-      $sierra_db_client.exec_query query
+      sierra_result = $sierra_db_client.exec_query query
+      $logger.debug("#{$batch_id} sierra result for #{@ids.join(",")}: #{sierra_result.values}")
+      sierra_result
 
     rescue SierraDbError => e
-      $logger.error "Error fetching Sierra Batch #{@ids}"
+      $logger.error "#{$batch_id} Error fetching Sierra Batch #{@ids}"
       []
     end
   end

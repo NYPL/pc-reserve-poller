@@ -16,15 +16,19 @@ class EnvisionwareManager
   end
 
   def exec_query(query)
-      $logger.info 'Querying Envisionware db'
-      $logger.debug "Executing query: #{query}"
+      $logger.info "#{$batch_id} Querying Envisionware db"
+      $logger.debug "#{$batch_id} Executing query: #{query}"
 
       begin
           @client.query query
       rescue StandardError => e
-          $logger.error 'Unable to query envisionware db', { message: e.message }
+          $logger.error "#{$batch_id} Unable to query envisionware db', { message: e.message }"
           raise EnvisionwareManagerError, 'Cannot execute query against db, no rows retrieved'
       end
+  end
+
+  def close
+    @client.close
   end
 
 end

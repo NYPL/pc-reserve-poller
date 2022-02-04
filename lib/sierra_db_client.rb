@@ -14,15 +14,19 @@ class SierraDbClient
     end
 
     def exec_query(query)
-        $logger.info 'Querying db'
-        $logger.debug "Executing query: #{query}"
+        $logger.info "#{$batch_id} Querying db"
+        $logger.debug "#{$batch_id} Executing query: #{query}"
 
         begin
             @conn.exec_params query
         rescue StandardError => e
-            $logger.error 'Unable to query db', { message: e.message }
+            $logger.error "#{$batch_id} Unable to query db", { message: e.message }
             raise SierraDbError, 'Cannot execute query against db, no rows retrieved'
         end
+    end
+
+    def close
+      @conn.close
     end
 end
 
