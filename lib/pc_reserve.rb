@@ -40,10 +40,11 @@ class PcReserve
 
   #  postal_code: Query from Sierra directly (see “Patron Postal Code Concerns”)
   def postal_code
+    $logger.debug("Sierra batch : #{@sierra_batch}")
     sierra_resp = @sierra_batch[@id]
 
     if !sierra_resp
-      $logger.warn('Received no matching postal code')
+      $logger.warn("#{$batch_id} Received no matching postal code")
       nil
     else
       sierra_resp
@@ -106,11 +107,17 @@ class PcReserve
         :staff_override,
         :patron_retrieval_status
       ]
-      self.event = fields.map {|field| [ field, self.send(field) ]}.to_h
+      self.event = fields.map do |field|
+        begin
+          [ field, self.send(field) ]
+        rescue StandardError => e
+          $logger.error("Problem with field #{field} in data #{@data}")
+        end
+      end.to_h
   end
 
   def push_event
-    $logger.debug("Pushing event: #{event}")
+    $logger.debug("Pushing event: ", { event: event, patron: patron.value, data: data, sierra_batch: @sierra_batch })
     $kinesis_client << event
   end
 

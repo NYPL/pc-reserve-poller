@@ -15,7 +15,7 @@ class Batcher
       batch.match_to_ids resp
     end
 
-    responses.reduce do |acc, el|
+    responses.reduce({}) do |acc, el|
       acc.merge el
     end
 

@@ -17,7 +17,8 @@ end
 
 def init
   load_env_vars
-  $logger = NYPLRubyUtil::NyplLogFormatter.new(STDOUT, level: ENV['LOG_LEVEL'])
+  log_path = ENV['LOG_PATH'] || STDOUT
+  $logger = NYPLRubyUtil::NyplLogFormatter.new(log_path, level: ENV['LOG_LEVEL'])
 
   $kinesis_client = NYPLRubyUtil::KinesisClient.new({
         :custom_aws_config => {
@@ -40,6 +41,8 @@ def init
   $sierra_db_client = SierraDbClient.new
 
   $logger.debug "Initialized function"
+
+  $batch_number ||= 1
 end
 
 def handle_event(event:, context:)
@@ -53,9 +56,14 @@ def handle_event(event:, context:)
     cr_key = current_state.cr_key
   end
 
+  $batch_id = "Time: #{Time.new.to_s}, key: #{cr_key}"
+  $logger.info('Begin batch', { id: $batch_id })
+
   # build and execute the query
   query  = QueryBuilder.from({ cr_key: cr_key })
-  response = EnvisionwareManager.new.exec_query query
+  envisionware_manager = EnvisionwareManager.new
+  response = envisionware_manager.exec_query query
+
 
   # process the results in kinesis
   pc_reserve_batch = PcReserveBatch.new response
@@ -68,5 +76,15 @@ def handle_event(event:, context:)
     StateManager.set_current_state new_state.json
   end
 
-  $logger.info "Processing complete"
+  envisionware_manager.close
+  $sierra_db_client.close
+
+  reached_max_batches = ENV['MAX_BATCHES'] && $batch_number >= ENV['MAX_BATCHES'].to_i
+
+  if ENV['BIC_SIZE'] && response.count >= ENV['BIC_SIZE'].to_i && !reached_max_batches
+    $logger.info("Finished batch #{$batch_id}, starting again")
+    handle_event(event: {}, context: {})
+  else
+    $logger.info "#{$batch_id} Processing complete"
+  end
 end

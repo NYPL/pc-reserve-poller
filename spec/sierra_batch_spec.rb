@@ -10,12 +10,15 @@ describe 'SierraBatch' do
       @ids = [1,2,3]
       $sierra_db_client = double()
       @sierra_batch = SierraBatch.new @ids
+      allow($logger).to receive(:debug)
     end
 
     it 'should make the correct query' do
+      @successful_response = double()
+      allow(@successful_response).to receive(:values).and_return([])
       allow($sierra_db_client).to receive(:exec_query).with("SELECT patron_view.record_num,patron_record_address.postal_code" +
         " FROM sierra_view.patron_view LEFT OUTER JOIN sierra_view.patron_record_address ON patron_record_address.patron_record_id=patron_view.id" +
-        " WHERE patron_view.record_num IN (1,2,3);")
+        " WHERE patron_view.record_num IN (1,2,3);").and_return @successful_response
       expect($sierra_db_client).to receive(:exec_query).with("SELECT patron_view.record_num,patron_record_address.postal_code" +
         " FROM sierra_view.patron_view LEFT OUTER JOIN sierra_view.patron_record_address ON patron_record_address.patron_record_id=patron_view.id" +
         " WHERE patron_view.record_num IN (1,2,3);")
@@ -24,6 +27,7 @@ describe 'SierraBatch' do
 
     it 'should return response in case of successful query' do
       @successful_response = double()
+      allow(@successful_response).to receive(:values).and_return([])
       allow($sierra_db_client).to receive(:exec_query).with("SELECT patron_view.record_num,patron_record_address.postal_code" +
         " FROM sierra_view.patron_view LEFT OUTER JOIN sierra_view.patron_record_address ON patron_record_address.patron_record_id=patron_view.id" +
         " WHERE patron_view.record_num IN (1,2,3);").and_return @successful_response
