@@ -1,4 +1,5 @@
 require "nypl_ruby_util"
+require "memory_profiler"
 
 require_relative 'lib/state_manager'
 require_relative 'lib/query_builder'
@@ -45,54 +46,60 @@ def init
 end
 
 def handle_event(event:, context:)
-  begin
-    $batch_number = 1
-    finished = false
-    while !finished
-      init
-      # get the required db params from the current state if not configured locally
-      if ENV['CR_KEY_START']
-        cr_key = ENV['CR_KEY_START']
-      else
-        current_state = State.from_s3 StateManager.fetch_current_state
-        cr_key = current_state.cr_key
+  require 'memory_profiler'
+  puts 'using memory profiler'
+    begin
+      $batch_number = 1
+      finished = false
+      while !finished
+        report = MemoryProfiler.report do
+        init
+        # get the required db params from the current state if not configured locally
+        if ENV['CR_KEY_START']
+          cr_key = ENV['CR_KEY_START']
+        else
+          current_state = State.from_s3 StateManager.fetch_current_state
+          cr_key = current_state.cr_key
+        end
+
+        $batch_id = "Time: #{Time.new.to_s}, key: #{cr_key}"
+        $logger.info('Begin batch', { id: $batch_id, number: $batch_number, size: ENV['BIC_SIZE'] })
+
+        # build and execute the query
+        query  = QueryBuilder.from({ cr_key: cr_key })
+        envisionware_manager = EnvisionwareManager.new
+        response = envisionware_manager.exec_query query
+
+
+        # process the results in kinesis
+        pc_reserve_batch = PcReserveBatch.new response
+        pc_reserve_batch.process
+
+
+        # update the state unless this is a test run
+        unless ENV['UPDATE_STATE'] == 'false'
+          new_state = State.from_db_result response
+          StateManager.set_current_state new_state.json
+        end
+
+        envisionware_manager.close
+        $sierra_db_client.close
+
+        reached_max_batches = ENV['MAX_BATCHES'] && $batch_number >= ENV['MAX_BATCHES'].to_i
+
+        if ENV['BIC_SIZE'] && response.count >= ENV['BIC_SIZE'].to_i && !reached_max_batches
+          $batch_number += 1
+          $logger.info("Finished batch #{$batch_id}, starting again")
+        else
+          finished = true
+          $logger.info "#{$batch_id} Processing complete"
+        end
       end
-
-      $batch_id = "Time: #{Time.new.to_s}, key: #{cr_key}"
-      $logger.info('Begin batch', { id: $batch_id, number: $batch_number, size: ENV['BIC_SIZE'] })
-
-      # build and execute the query
-      query  = QueryBuilder.from({ cr_key: cr_key })
-      envisionware_manager = EnvisionwareManager.new
-      response = envisionware_manager.exec_query query
-
-
-      # process the results in kinesis
-      pc_reserve_batch = PcReserveBatch.new response
-      pc_reserve_batch.process
-
-
-      # update the state unless this is a test run
-      unless ENV['UPDATE_STATE'] == 'false'
-        new_state = State.from_db_result response
-        StateManager.set_current_state new_state.json
-      end
-
-      envisionware_manager.close
-      $sierra_db_client.close
-
-      reached_max_batches = ENV['MAX_BATCHES'] && $batch_number >= ENV['MAX_BATCHES'].to_i
-
-      if ENV['BIC_SIZE'] && response.count >= ENV['BIC_SIZE'].to_i && !reached_max_batches
-        $batch_number += 1
-        $logger.info("Finished batch #{$batch_id}, starting again")
-      else
-        finished = true
-        $logger.info "#{$batch_id} Processing complete"
-      end
+      $logger.info('Report: ', { report: report.pretty_print})
     end
-  rescue StandardError => e
-    $logger.error("Uncaught fatal error: ", { message: e.message })
-  end
+    rescue StandardError => e
+      $logger.error("Uncaught fatal error: ", { message: e.message })
+    end
+  # report.pretty_print(to_file: './scripts/logs/memory')
 
 end

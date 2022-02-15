@@ -5,6 +5,7 @@ gem 'aws-sdk-s3'
 gem 'mysql2'
 gem 'bcrypt'
 gem 'pg'
+gem 'memory_profiler'
 
 group :test do
     gem 'rspec'
