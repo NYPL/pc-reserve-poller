@@ -1,5 +1,4 @@
 require "nypl_ruby_util"
-require "memory_profiler"
 
 require_relative 'lib/state_manager'
 require_relative 'lib/query_builder'
@@ -39,21 +38,25 @@ def init
       { access_key_id: ENV['AWS_ACCESS_KEY_ID'], secret_access_key: ENV['AWS_SECRET_ACCESS_KEY'] }
   )
 
+  $platform_client = ENV['APP_ENV'] == 'local' ?
+    NYPLRubyUtil::PlatformApiClient.new( kms_options: { profile: ENV['AWS_PROFILE'] }) :
+    NYPLRubyUtil::PlatformApiClient.new
+
   $sierra_db_client = SierraDbClient.new
+
+  $envisionware_manager = EnvisionwareManager.new
 
   $logger.debug "Initialized function"
 
 end
 
 def handle_event(event:, context:)
-  require 'memory_profiler'
-  puts 'using memory profiler'
+    init
+
     begin
       $batch_number = 1
       finished = false
       while !finished
-        report = MemoryProfiler.report do
-        init
         # get the required db params from the current state if not configured locally
         if ENV['CR_KEY_START']
           cr_key = ENV['CR_KEY_START']
@@ -67,23 +70,17 @@ def handle_event(event:, context:)
 
         # build and execute the query
         query  = QueryBuilder.from({ cr_key: cr_key })
-        envisionware_manager = EnvisionwareManager.new
-        response = envisionware_manager.exec_query query
-
+        response = $envisionware_manager.exec_query query
 
         # process the results in kinesis
         pc_reserve_batch = PcReserveBatch.new response
         pc_reserve_batch.process
-
 
         # update the state unless this is a test run
         unless ENV['UPDATE_STATE'] == 'false'
           new_state = State.from_db_result response
           StateManager.set_current_state new_state.json
         end
-
-        envisionware_manager.close
-        $sierra_db_client.close
 
         reached_max_batches = ENV['MAX_BATCHES'] && $batch_number >= ENV['MAX_BATCHES'].to_i
 
@@ -95,11 +92,10 @@ def handle_event(event:, context:)
           $logger.info "#{$batch_id} Processing complete"
         end
       end
-      $logger.info('Report: ', { report: report.pretty_print})
-    end
+
+      $envisionware_manager.close
+      $sierra_db_client.close
     rescue StandardError => e
       $logger.error("Uncaught fatal error: ", { message: e.message })
     end
-  # report.pretty_print(to_file: './scripts/logs/memory')
-
 end
