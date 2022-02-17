@@ -7,9 +7,6 @@ class PatronBatch
 
   def initialize(barcodes)
     @barcodes = barcodes
-    @platform_client = ENV['APP_ENV'] == 'local' ?
-      NYPLRubyUtil::PlatformApiClient.new( kms_options: { profile: ENV['AWS_PROFILE'] }) :
-      NYPLRubyUtil::PlatformApiClient.new
   end
 
   def get_resp
@@ -21,7 +18,7 @@ class PatronBatch
     end
 
     begin
-      resp = @platform_client.get("#{ENV['PATRON_ENDPOINT']}?fields=id,barcodes,fixedFields,patronCodes&barcode=#{barcode}")
+      resp = $platform_client.get("#{ENV['PATRON_ENDPOINT']}?fields=id,barcodes,fixedFields,patronCodes&barcode=#{barcode}")
       resp["data"].map {|row| { barcode: barcode, row: row.merge({ "status" => "found" }) }}
     rescue StandardError => e
       $logger.error("#{$batch_id} Failed to fetch patron data for ids #{@barcodes}", { message: e.message })
