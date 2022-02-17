@@ -38,53 +38,64 @@ def init
       { access_key_id: ENV['AWS_ACCESS_KEY_ID'], secret_access_key: ENV['AWS_SECRET_ACCESS_KEY'] }
   )
 
+  $platform_client = ENV['APP_ENV'] == 'local' ?
+    NYPLRubyUtil::PlatformApiClient.new( kms_options: { profile: ENV['AWS_PROFILE'] }) :
+    NYPLRubyUtil::PlatformApiClient.new
+
   $sierra_db_client = SierraDbClient.new
+
+  $envisionware_manager = EnvisionwareManager.new
 
   $logger.debug "Initialized function"
 
-  $batch_number ||= 1
 end
 
 def handle_event(event:, context:)
-  init
+    init
 
-  # get the required db params from the current state if not configured locally
-  if ENV['CR_KEY_START']
-    cr_key = ENV['CR_KEY_START']
-  else
-    current_state = State.from_s3 StateManager.fetch_current_state
-    cr_key = current_state.cr_key
-  end
+    begin
+      $batch_number = 1
+      finished = false
+      while !finished
+        # get the required db params from the current state if not configured locally
+        if ENV['CR_KEY_START']
+          cr_key = ENV['CR_KEY_START']
+        else
+          current_state = State.from_s3 StateManager.fetch_current_state
+          cr_key = current_state.cr_key
+        end
 
-  $batch_id = "Time: #{Time.new.to_s}, key: #{cr_key}"
-  $logger.info('Begin batch', { id: $batch_id })
+        $batch_id = "Time: #{Time.new.to_s}, key: #{cr_key}"
+        $logger.info('Begin batch', { id: $batch_id, number: $batch_number, size: ENV['BIC_SIZE'] })
 
-  # build and execute the query
-  query  = QueryBuilder.from({ cr_key: cr_key })
-  envisionware_manager = EnvisionwareManager.new
-  response = envisionware_manager.exec_query query
+        # build and execute the query
+        query  = QueryBuilder.from({ cr_key: cr_key })
+        response = $envisionware_manager.exec_query query
 
+        # process the results in kinesis
+        pc_reserve_batch = PcReserveBatch.new response
+        pc_reserve_batch.process
 
-  # process the results in kinesis
-  pc_reserve_batch = PcReserveBatch.new response
-  pc_reserve_batch.process
+        # update the state unless this is a test run
+        unless ENV['UPDATE_STATE'] == 'false'
+          new_state = State.from_db_result response
+          StateManager.set_current_state new_state.json
+        end
 
+        reached_max_batches = ENV['MAX_BATCHES'] && $batch_number >= ENV['MAX_BATCHES'].to_i
 
-  # update the state unless this is a test run
-  unless ENV['UPDATE_STATE'] == 'false'
-    new_state = State.from_db_result response
-    StateManager.set_current_state new_state.json
-  end
+        if ENV['BIC_SIZE'] && response.count >= ENV['BIC_SIZE'].to_i && !reached_max_batches
+          $batch_number += 1
+          $logger.info("Finished batch #{$batch_id}, starting again")
+        else
+          finished = true
+          $logger.info "#{$batch_id} Processing complete"
+        end
+      end
 
-  envisionware_manager.close
-  $sierra_db_client.close
-
-  reached_max_batches = ENV['MAX_BATCHES'] && $batch_number >= ENV['MAX_BATCHES'].to_i
-
-  if ENV['BIC_SIZE'] && response.count >= ENV['BIC_SIZE'].to_i && !reached_max_batches
-    $logger.info("Finished batch #{$batch_id}, starting again")
-    handle_event(event: {}, context: {})
-  else
-    $logger.info "#{$batch_id} Processing complete"
-  end
+      $envisionware_manager.close
+      $sierra_db_client.close
+    rescue StandardError => e
+      $logger.error("Uncaught fatal error: ", { message: e.message })
+    end
 end
