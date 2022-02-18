@@ -79,6 +79,7 @@ def handle_event(event:, context:)
         # update the state unless this is a test run
         unless ENV['UPDATE_STATE'] == 'false'
           new_state = State.from_db_result response
+          $logger.info('setting state: ', new_state: new_state.json)
           StateManager.set_current_state new_state.json
         end
 

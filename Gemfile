@@ -6,6 +6,7 @@ gem 'mysql2'
 gem 'bcrypt'
 gem 'pg'
 gem 'memory_profiler'
+gem 'pry'
 
 group :test do
     gem 'rspec'

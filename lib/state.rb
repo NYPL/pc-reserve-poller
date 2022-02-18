@@ -1,4 +1,5 @@
 # Wrapper for respresentation of lambda state
+require 'pry'
 
 class State
 
@@ -28,7 +29,10 @@ class State
 
   def self.extract_state_from_db_response (db_response)
     last_element = db_response.lazy.drop(db_response.count  - 1).first
-    { "cr_key" => last_element["pcrKey"] }
+    last_key = last_element["pcrKey"]
+    $logger.error('Missing pcrKey', db_response: db_response.to_a) if !last_key
+    # binding.pry if !last_key
+    { "cr_key" => last_key }
   end
 
   def self.extract_state_from_s3_response (s3_response)

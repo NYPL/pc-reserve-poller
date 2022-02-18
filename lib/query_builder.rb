@@ -3,7 +3,7 @@
 class QueryBuilder
 
   def self.from (params)
-    "SELECT pcrUserID FROM #{ENV['TABLE_NAME']} WHERE pcrKey > #{params[:cr_key]}#{self.limit};"
+    "SELECT pcrUserID, pcrKey FROM #{ENV['TABLE_NAME']} WHERE pcrKey > #{params[:cr_key]}#{self.limit};"
   end
 
   def self.limit
