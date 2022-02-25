@@ -97,6 +97,6 @@ def handle_event(event:, context:)
       $envisionware_manager.close
       $sierra_db_client.close
     rescue StandardError => e
-      $logger.error("Uncaught fatal error: ", { message: e.message })
+      $logger.error("Uncaught fatal error: ", { error_message: e.message })
     end
 end

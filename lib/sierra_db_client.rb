@@ -20,7 +20,7 @@ class SierraDbClient
         begin
             @conn.exec_params query
         rescue StandardError => e
-            $logger.error "#{$batch_id} Unable to query db", { message: e.message }
+            $logger.error "#{$batch_id} Unable to query db", { error_message: e.message }
             raise SierraDbError, 'Cannot execute query against db, no rows retrieved'
         end
     end

@@ -22,7 +22,7 @@ class EnvisionwareManager
       begin
           @client.query query
       rescue StandardError => e
-          $logger.error "#{$batch_id} Unable to query envisionware db'", { message: e.message }
+          $logger.error "#{$batch_id} Unable to query envisionware db'", { error_message: e.message }
           raise EnvisionwareManagerError, 'Cannot execute query against db, no rows retrieved'
       end
   end

@@ -21,7 +21,7 @@ class PatronBatch
       resp = $platform_client.get("#{ENV['PATRON_ENDPOINT']}?fields=id,barcodes,fixedFields,patronCodes&barcode=#{barcode}")
       resp["data"].map {|row| { barcode: barcode, row: row.merge({ "status" => "found" }) }}
     rescue StandardError => e
-      $logger.error("#{$batch_id} Failed to fetch patron data for ids #{@barcodes}", { message: e.message })
+      $logger.error("#{$batch_id} Failed to fetch patron data for ids #{@barcodes}", { error_message: e.message })
       [{ barcode: barcode, row: { "status" => "missing" } }]
     end
   end
