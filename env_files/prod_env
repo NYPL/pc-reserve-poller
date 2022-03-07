@@ -15,7 +15,7 @@ SIERRA_DB_PSWD=AQECAHh7ea2tyZ6phZgT4B9BDKwguhlFtRC6hgt+7HbmeFsrsgAAAGkwZwYJKoZIh
 SCHEMA_TYPE=PcReserve
 KINESIS_STREAM=PcReserve-production
 S3_AWS_REGION=us-east-1
-S3_BASE_URL=https://sierra-poller-state-producion.s3.amazonaws.com
+S3_BASE_URL=https://sierra-poller-state-production.s3.amazonaws.com
 BUCKET_NAME=sierra-poller-state-production
 S3_RESOURCE=pc_reserve_poller_status_production.json
 BCRYPT_SALT=AQECAHh7ea2tyZ6phZgT4B9BDKwguhlFtRC6hgt+7HbmeFsrsgAAAHsweQYJKoZIhvcNAQcGoGwwagIBADBlBgkqhkiG9w0BBwEwHgYJYIZIAWUDBAEuMBEEDFqhoI9xSv6texISOgIBEIA4dj5hPgp5DZ4sg0MmWdjZ0oh5X3+4dEMijJxgaeE7S5xOfNHRXU92wHHPbOlwtc0ytRiOuONNZLo=
