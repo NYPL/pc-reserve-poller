@@ -52,4 +52,4 @@ jobs:
       - name: Force ECS Update
         run: |
           aws ecs update-service --cluster pc-reserve-poller-production --service pc-reserve-poller-app-production --force-new-deployment
-          aws ecs run-task --cluster pc-reserve-poller-production --task-definition pc-reserve-poller-app-production:14 --count 1
+          aws ecs run-task --cluster pc-reserve-poller-production --task-definition pc-reserve-poller-app-production:1 --count 1
