@@ -44,7 +44,7 @@ class PcReserve
     sierra_resp = @sierra_batch[@id]
 
     if !sierra_resp
-      $logger.warn("#{$batch_id} Received no matching postal code")
+      $logger.warn("#{$batch_id} Received no matching postal code #{data["pcrKey"]}")
       nil
     else
       sierra_resp
