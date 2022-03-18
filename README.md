@@ -21,7 +21,7 @@ docker image build  -t pc-reserve-poller:latest .
 
 - run docker command e.g
 ```
-docker container run -v ~/.aws/credentials:/root/.aws/credentials:ro --env-file env_files/local_env pc-reserve-poller:latest
+docker container run -e ENVIRONMENT=[environment] -e AWS_ACCESS_KEY_ID=[aws access key] -e AWS_SECRET_ACCESS_KEY=[aws secret access key] pc-reserve-poller:local
 ```
 - To update, follow the instructions on AWS and then run
 

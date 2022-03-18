@@ -69,7 +69,7 @@ class PcReserve
 
   # transaction_et: pcrDateTime
   def transaction_et
-    data["pcrDateTime"].to_s
+    data["pcrDateTime"].to_date.to_s
   end
 
   # branch: pcrBranch
