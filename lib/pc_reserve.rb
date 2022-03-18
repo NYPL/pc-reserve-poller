@@ -42,12 +42,19 @@ class PcReserve
   def postal_code
     $logger.debug("Sierra batch : #{@sierra_batch}")
     sierra_resp = @sierra_batch[@id]
+    postal_regex = /^(\d{5})(-\d{4})?$/
 
-    if !sierra_resp
+    if !sierra_resp || !(sierra_resp.is_a? String)
       $logger.warn("#{$batch_id} Received no matching postal code #{data["pcrKey"]}")
       nil
     else
-      sierra_resp
+      match_data = postal_regex.match(sierra_resp)
+      if !match_data || !match_data[1]
+        $logger.warn("#{$batch_id} Received ill-formatted postal code type for #{data["pcrKey"]}")
+        return nil
+      else
+        return match_data[1]
+      end
     end
 
   end
