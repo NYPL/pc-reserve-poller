@@ -3,7 +3,7 @@ require_relative './sierra_db_client'
 require_relative './safe_navigation_wrapper'
 
 class PcReserve
-  attr_accessor :event, :data, :patron
+  attr_accessor :event, :data, :patron, :sierra_resp
 
   def initialize (data, sierra_batch, patron_batch)
     @data = data
@@ -11,6 +11,7 @@ class PcReserve
     @patron = patron_batch[@barcode] || SafeNavigationWrapper.new(nil)
     @id = @patron["id"].value ? @patron["id"].value.to_s : nil
     @sierra_batch = sierra_batch
+    @sierra_resp = @sierra_batch[@id]
     @patron_batch = patron_batch
   end
 
@@ -18,7 +19,12 @@ class PcReserve
   # Use the PatronService to convert it to a patronId.
   # Apply bcrypt obfuscation documented with samples here and implemented in Java here.
   def patron_id
-    ObfuscationHelper.obfuscate(@id || "barcode #{@barcode}")
+    if !sierra_resp || !sierra_resp[:patron_record_id] || !(sierra_resp[:patron_record_id].is_a? String)
+      $logger.warn("#{$batch_id} Received no matching patron id #{data["pcrKey"]}")
+      ObfuscationHelper.obfuscate("barcode #{@barcode}")
+    else
+      ObfuscationHelper.obfuscate(sierra_resp[:patron_record_id])
+    end
   end
 
   #  ptype_code: Using patron record already fetched, evaluate fixedFields[“47”][“value”]
@@ -41,14 +47,13 @@ class PcReserve
   #  postal_code: Query from Sierra directly (see “Patron Postal Code Concerns”)
   def postal_code
     $logger.debug("Sierra batch : #{@sierra_batch}")
-    sierra_resp = @sierra_batch[@id]
     postal_regex = /^(\d{5})(-\d{4})?$/
 
-    if !sierra_resp || !(sierra_resp.is_a? String)
+    if !sierra_resp || !sierra_resp[:postal_code] || !(sierra_resp[:postal_code].is_a? String)
       $logger.warn("#{$batch_id} Received no matching postal code #{data["pcrKey"]}")
       nil
     else
-      match_data = postal_regex.match(sierra_resp)
+      match_data = postal_regex.match(sierra_resp[:postal_code])
       if !match_data || !match_data[1]
         $logger.warn("#{$batch_id} Received ill-formatted postal code type for #{data["pcrKey"]}")
         return nil
