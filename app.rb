@@ -46,6 +46,8 @@ def init
 
   $envisionware_manager = EnvisionwareManager.new
 
+  $salt = $kms_client.decrypt(ENV['BCRYPT_SALT'])
+
   $logger.debug "Initialized function"
 
 end
