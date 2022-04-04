@@ -8,7 +8,7 @@ class SierraBatch
   def get_resp
     begin
 
-      query = "SELECT patron_view.record_num,patron_record_address.postal_code" +
+      query = "SELECT patron_view.record_num, patron_view.id AS patron_record_id, patron_record_address.postal_code" +
         " FROM sierra_view.patron_view LEFT OUTER JOIN sierra_view.patron_record_address ON patron_record_address.patron_record_id=patron_view.id" +
         " WHERE patron_view.record_num IN (#{@ids.join(",")});"
 
@@ -24,7 +24,7 @@ class SierraBatch
 
   def match_to_ids(resp)
     rows = resp.map do |row|
-      [ row["record_num"], row["postal_code"] ]
+      [ row["record_num"], { postal_code: row["postal_code"], patron_record_id: row["patron_record_id"] } ]
     end
 
     rows.to_h
