@@ -60,7 +60,7 @@ def handle_event(event:, context:)
       finished = false
       while !finished
         # get the required db params from the current state if not configured locally
-        if ENV['CR_KEY_START'] && ENV['PCR_DATE_TIME_START']
+        if ENV['CR_KEY_START'] && ENV['PCR_DATE_TIME_START'] && $batch_number == 1
           cr_key = ENV['CR_KEY_START']
           pcr_date_time = ENV['PCR_DATE_TIME_START']
         else
