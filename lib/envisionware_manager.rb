@@ -6,13 +6,18 @@ require 'mysql2'
 class EnvisionwareManager
 
   def initialize
-    @client = Mysql2::Client.new(
-      host: $kms_client.decrypt(ENV['ENVISIONWARE_HOST']),
-      port: ENV['ENVISIONWARE_PORT'],
-      database: ENV['ENVISIONWARE_NAME'],
-      username: $kms_client.decrypt(ENV['ENVISIONWARE_USER']),
-      password: $kms_client.decrypt(ENV['ENVISIONWARE_PASSWORD'])
-    )
+    begin
+      @client = Mysql2::Client.new(
+        host: $kms_client.decrypt(ENV['ENVISIONWARE_HOST']),
+        port: ENV['ENVISIONWARE_PORT'],
+        database: ENV['ENVISIONWARE_NAME'],
+        username: $kms_client.decrypt(ENV['ENVISIONWARE_USER']),
+        password: $kms_client.decrypt(ENV['ENVISIONWARE_PASSWORD'])
+      )
+    rescue StandardError => e
+      $logger.error("Error connecting to Envisionware", { error_message: e.message })
+      raise e
+    end
   end
 
   def exec_query(query)

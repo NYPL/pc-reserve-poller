@@ -3,7 +3,11 @@
 class QueryBuilder
 
   def self.from (params)
-    "SELECT * FROM #{ENV['TABLE_NAME']} WHERE pcrKey > #{params[:cr_key]} ORDER BY pcrKey ASC#{self.limit};"
+    "SELECT * FROM #{ENV['TABLE_NAME']} #{where(params)} ORDER BY pcrDateTime ASC, pcrKey ASC#{self.limit};"
+  end
+
+  def self.where(params)
+    "WHERE (pcrDateTime > #{params[:pcr_date_time]} OR (pcrDateTime = #{params[:pcr_date_time]} AND pcrKey > #{params[:cr_key]}))"
   end
 
   def self.limit
