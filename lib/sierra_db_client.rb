@@ -4,6 +4,7 @@ require 'pg'
 # Currently exposes a single method that allows executing an arbitraty query
 class SierraDbClient
     def initialize
+      begin
         @conn = PG.connect(
             host: $kms_client.decrypt(ENV['SIERRA_DB_HOST']),
             port: ENV['SIERRA_DB_PORT'],
@@ -11,6 +12,10 @@ class SierraDbClient
             user: $kms_client.decrypt(ENV['SIERRA_DB_USER']),
             password: $kms_client.decrypt(ENV['SIERRA_DB_PSWD'])
         )
+      rescue StandardError => e
+        $logger.error("Error connecting to Sierra", { error_message: e.message })
+        raise e
+      end
     end
 
     def exec_query(query)

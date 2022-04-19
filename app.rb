@@ -60,18 +60,21 @@ def handle_event(event:, context:)
       finished = false
       while !finished
         # get the required db params from the current state if not configured locally
-        if ENV['CR_KEY_START']
+        if ENV['CR_KEY_START'] && ENV['PCR_DATE_TIME_START'] && $batch_number == 1
           cr_key = ENV['CR_KEY_START']
+          pcr_date_time = ENV['PCR_DATE_TIME_START']
         else
           current_state = State.from_s3 StateManager.fetch_current_state
           cr_key = current_state.cr_key
+          pcr_date_time = current_state.pcr_date_time
         end
+
 
         $batch_id = "Time: #{Time.new.to_s}, key: #{cr_key}"
         $logger.info('Begin batch', { id: $batch_id, number: $batch_number, size: ENV['BIC_SIZE'] })
 
         # build and execute the query
-        query  = QueryBuilder.from({ cr_key: cr_key })
+        query  = QueryBuilder.from({ cr_key: cr_key, pcr_date_time: pcr_date_time })
         response = $envisionware_manager.exec_query query
 
         # process the results in kinesis
