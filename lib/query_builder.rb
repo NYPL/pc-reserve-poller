@@ -7,7 +7,7 @@ class QueryBuilder
   end
 
   def self.where(params)
-    "WHERE (pcrDateTime > #{params[:pcr_date_time]} OR (pcrDateTime = #{params[:pcr_date_time]} AND pcrKey > #{params[:cr_key]}))"
+    "WHERE (pcrDateTime > '#{params[:pcr_date_time]}' OR (pcrDateTime = '#{params[:pcr_date_time]}' AND pcrKey > #{params[:cr_key]}))"
   end
 
   def self.limit
