@@ -1,11 +1,8 @@
-PCReservePoller
+# PCReservePoller
 
-The PCReservePoller periodically checks for new patron reservations on PC's, merges this information with patron data,
-and obfuscates identifying patron information.
+The PCReservePoller periodically checks for new patron reservations on PC's, merges this information with patron data, obfuscates identifying patron information, and writes the result to PcReserve kinesis streams for ingest into [BIC](https://github.com/NYPL/BIC)
 
-... More to come ...
-
-SETTING UP
+## Setup
 
 - git clone
 - cd into the relevant directory
@@ -29,7 +26,7 @@ docker container run -e ENVIRONMENT=[environment] -e AWS_ACCESS_KEY_ID=[aws acce
 aws ecs update-service --cluster pc-reserve-poller-qa --service pc-reserve-poller-app-qa --force-new-deployment --profile nypl-digital-dev
 ```
 
-CONTRIBUTING
+## Contributing
 
 - branch from main
 - merge into main
