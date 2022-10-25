@@ -1,8 +1,8 @@
 require 'nypl_ruby_util'
+
 require_relative './safe_navigation_wrapper'
 
-# A helper class for requresting a batch of patron data from Platform
-
+# A helper class for requesting a batch of patron data from Platform API
 class PatronBatch
 
   def initialize(barcodes)
@@ -10,9 +10,14 @@ class PatronBatch
   end
 
   def get_resp
-    barcode = @barcodes.first # Actually only fetching one barcode at a time
+    # We should actually only be fetching one barcode at a time due to Platform limitations
+    if @barcodes.length > 1
+      $logger.error "#{$batch_id} More than one barcode in patron batch: #{@barcodes}"
+    end
 
-    # these are guest passes and will not match anything in the patron db:
+    barcode = @barcodes.first
+
+    # These are guest passes and will not match anything in the patron db:
     if barcode.start_with? '25555'
       return [{ barcode: barcode, row: { "status" => "guest_pass"} }]
     end
@@ -21,7 +26,7 @@ class PatronBatch
       resp = $platform_client.get("#{ENV['PATRON_ENDPOINT']}?fields=id,barcodes,fixedFields,patronCodes&barcode=#{barcode}")
       resp["data"].map {|row| { barcode: barcode, row: row.merge({ "status" => "found" }) }}
     rescue StandardError => e
-      $logger.warn("#{$batch_id} Failed to fetch patron data for ids #{@barcodes}", { error_message: e.message })
+      $logger.info("#{$batch_id} Failed to fetch patron data for barcode #{barcode}", { error_message: e.message })
       [{ barcode: barcode, row: { "status" => "missing" } }]
     end
   end

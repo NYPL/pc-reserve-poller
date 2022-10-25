@@ -15,9 +15,7 @@ describe 'PcReserve' do
         "pcrUserData1" => "staff_override",
         "pcrKey" => "aaaaa"
       }
-      @sierra_batch = { "1" => "postal_code" }
 
-      # allow(ObfuscationHelper).to receive(:obfuscate).and_return('12345')
       allow(ObfuscationHelper).to receive(:obfuscate) do |arg|
         if arg.start_with? 'barcode'
           '6789'
@@ -28,13 +26,13 @@ describe 'PcReserve' do
 
       $kinesis_client = double()
       allow($kinesis_client).to receive(:<<)
-      @patron_batch = double()
 
-      allow(@patron_batch).to receive(:[]).with('123456789').and_return (SafeNavigationWrapper.new({
+      @patron_map = double()
+      allow(@patron_map).to receive(:[]).with('123456789').and_return (SafeNavigationWrapper.new({
         'id' => '1',
         'fixedFields' => {
           '47' => { 'value' => '2'},
-          '53' => { 'value' => 'library_code    '},
+          '53' => { 'value' => 'library_code'},
         },
         'patronCodes' => {
           'pcode3' => 'p',
@@ -42,22 +40,28 @@ describe 'PcReserve' do
         'status' => 'found'
       }))
 
-      allow(@patron_batch).to receive(:[]).with('255556789').and_return (SafeNavigationWrapper.new({
+      allow(@patron_map).to receive(:[]).with('255556789').and_return (SafeNavigationWrapper.new({
           'status' => 'guest_pass'
       }))
+
+      @sierra_resp = double()
+      allow(@sierra_resp).to receive(:[]).with(:patron_record_id).and_return ('12345')
+      allow(@sierra_resp).to receive(:[]).with(:postal_code).and_return ('10000-9999')
+      
+      @sierra_map = double()
+      allow(@sierra_map).to receive(:[])
+      allow(@sierra_map).to receive(:[]).with('1').and_return (@sierra_resp)
     end
 
     it 'should push the right data to kinesis' do
-
-
-      @pc_reserve = PcReserve.new(@data, @sierra_batch, @patron_batch)
+      @pc_reserve = PcReserve.new(@data, @sierra_map, @patron_map)
 
       expect($kinesis_client).to receive(:<<).with({
           patron_id: '12345',
           ptype_code: 2,
           patron_home_library_code: 'library_code',
           pcode3: 'p',
-          postal_code: "postal_code",
+          postal_code: "10000",
           geoid: nil,
           key: '12345',
           minutes_used: "minutes",
@@ -71,7 +75,6 @@ describe 'PcReserve' do
     end
 
     it 'should fall back to defaults for missing patron' do
-
       @missing_data = {
         "pcrUserID" => "255556789",
         "pcrMinutesUsed" => "minutes",
@@ -82,8 +85,7 @@ describe 'PcReserve' do
         "pcrKey" => "aaaaa"
       }
 
-
-      @pc_reserve = PcReserve.new(@missing_data, @sierra_batch, @patron_batch)
+      @pc_reserve = PcReserve.new(@missing_data, @sierra_map, @patron_map)
 
       expect($kinesis_client).to receive(:<<).with({
         :area=>"area",

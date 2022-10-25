@@ -1,5 +1,4 @@
 # A wrapper to reduce boilerplate from defensive coding
-
 class SafeNavigationWrapper
 
   def initialize (value)

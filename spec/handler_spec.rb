@@ -14,8 +14,10 @@ describe 'handler' do
             allow(Aws::S3::Client).to receive(:new).and_return(@s3_mock)
             @platform_mock = double()
             allow(NYPLRubyUtil::PlatformApiClient).to receive(:new).and_return(@platform_mock)
-            @pg_mock = double()
-            allow(SierraDbClient).to receive(:new).and_return(@pg_mock)
+            @sierra_mock = double()
+            allow(SierraDbClient).to receive(:new).and_return(@sierra_mock)
+            @envisionware_mock= double()
+            allow(EnvisionwareDbClient).to receive(:new).and_return(@envisionware_mock)
         }
 
         it "should invoke clients and logger from the ruby utils gem" do

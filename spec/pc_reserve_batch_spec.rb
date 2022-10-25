@@ -28,7 +28,7 @@ describe 'PcReserveBatch' do
           '233333333' => SafeNavigationWrapper.new({ "id" => '3' })
       }
       allow(Batcher).to receive(:from).with(PatronBatch, @expected_barcodes).and_return(@patron_batch)
-      @sierra_batch = double()
+      @sierra_batch = {}
       allow(Batcher).to receive(:from).with(SierraBatch, @expected_patron_ids).and_return(@sierra_batch)
       @pc_reserve_batch = PcReserveBatch.new (@db_response)
       $kinesis_client = double()
@@ -89,7 +89,7 @@ describe 'PcReserveBatch' do
       allow(PcReserve).to receive(:new).with({"pcrUserID" => '000000000'}, @sierra_batch, @patron_batch).and_return(pc_reserve_4)
       expect(PcReserve).to receive(:new).with({"pcrUserID" => '000000000'}, @sierra_batch, @patron_batch)
       expect(pc_reserve_4).to receive(:process)
-      allow($logger).to receive(:info).with(/Finished processing records/)
+      allow($logger).to receive(:info)
       expect($logger).to receive(:info).with(/Finished processing records/)
       @pc_reserve_batch.process
     end
@@ -112,7 +112,7 @@ describe 'PcReserveBatch' do
       allow(PcReserve).to receive(:new).with({"pcrUserID" => '000000000'}, @sierra_batch, @patron_batch).and_return(pc_reserve_4)
       expect(PcReserve).to receive(:new).with({"pcrUserID" => '000000000'}, @sierra_batch, @patron_batch)
       expect(pc_reserve_4).to receive(:process)
-      allow($logger).to receive(:info).with(/Finished processing records/)
+      allow($logger).to receive(:info)
       expect($logger).to receive(:info).with(/Finished processing records/)
       @pc_reserve_batch.process
     end
