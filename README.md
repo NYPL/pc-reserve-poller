@@ -62,7 +62,6 @@ aws ecs update-service --cluster pc-reserve-poller-production --service pc-reser
 aws ecs run-task --cluster pc-reserve-poller-qa --task-definition pc-reserve-poller-app-production:14 --count 1
 ```
 
-4. 
 ## Environment Variables
 The first 28 variables in each environment file in the `env_files` directory (every variable through `KINESIS_BATCH_SIZE`) are required by the poller to run. There are then five additional optional variables that can be used for development purposes. Note that the `qa_env` and `production_env` files are actually read by the deployed service, so do not change these files unless you want to change how the service will behave in the wild -- these are not meant for local testing.
 
