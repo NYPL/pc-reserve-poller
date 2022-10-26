@@ -3,7 +3,7 @@ require_relative './patron_batch'
 require_relative './pc_reserve'
 require_relative './sierra_batch'
 
-# Wrapper for pushing to Kinesis
+# A class for processing a batch of Envisionware records and pushing the results to Kinesis 
 class PcReserveBatch
 
   attr_accessor :envisionware_db_response

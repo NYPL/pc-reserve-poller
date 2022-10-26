@@ -1,5 +1,6 @@
 require 'bcrypt'
 
+# A helper class for obfuscating data using bcrypt
 class ObfuscationHelper
 
   def self.obfuscate (string)

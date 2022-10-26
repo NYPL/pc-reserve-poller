@@ -2,6 +2,8 @@ require_relative './obfuscation_helper'
 require_relative './safe_navigation_wrapper'
 require_relative './sierra_db_client'
 
+# A class representing a single PcReserve record with helper methods to combine data
+# from Envisionware, Platform, and Sierra and to push an event to the Kinesis client.
 class PcReserve
 
   attr_accessor :event, :data, :patron, :sierra_resp
