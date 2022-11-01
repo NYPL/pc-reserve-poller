@@ -1,12 +1,10 @@
 require_relative './spec_helper'
 require_relative '../lib/obfuscation_helper'
 
-
 describe 'ObfuscationHelper' do
 
   before(:each) do
-    $kms_client = double()
-    allow($kms_client).to receive(:decrypt).with('NaCl').and_return('NaCl')
+    $salt = ENV['BCRYPT_SALT']
   end
 
   describe '#obfuscate' do
@@ -17,6 +15,7 @@ describe 'ObfuscationHelper' do
       allow(BCrypt::Engine).to receive(:hash_secret).and_return(fake_hash)
       allow(BCrypt::Password).to receive(:new).and_return(fake_password)
       allow(fake_password).to receive(:checksum).and_return('fake_encrypted')
+
       expect(BCrypt::Engine).to receive(:hash_secret).with(inp, ENV['BCRYPT_SALT'])
       expect(BCrypt::Password).to receive(:new).with(fake_hash)
       obfuscated = ObfuscationHelper.obfuscate(inp)

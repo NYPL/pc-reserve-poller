@@ -1,9 +1,8 @@
 require_relative './spec_helper'
 
-
 describe 'state' do
   before(:each) do
-    @test_state_object = { "cr_key" => 'test' }
+    @test_state_object = { "pcr_date_time"=>'1900-01-01 00:00:00', "pcr_key" => 1 }
   end
 
   describe '#init' do
@@ -13,10 +12,11 @@ describe 'state' do
     end
   end
 
-  describe '#cr_key' do
-    it 'should get the cr_key from the state object' do
+  describe '#pcr_key' do
+    it 'should get the pcr_key from the state object' do
       state = State.new @test_state_object
-      expect(state.cr_key).to eql('test')
+      expect(state.pcr_date_time).to eql('1900-01-01 00:00:00')
+      expect(state.pcr_key).to eql(1)
     end
   end
 
@@ -28,30 +28,21 @@ describe 'state' do
   end
 
   describe '#from_db_result' do
-    it 'should return a state instance matching the s3 response' do
-      state = State.from_db_result ([ { 'pcrKey' => 1}, { 'pcrKey' => 2} ])
-      expect(state.cr_key).to eql(2)
+    it 'should return a state instance matching the db response' do
+      state = State.from_db_result ([
+        {"pcrDateTime"=>'1900-01-01 00:00:00', 'pcrKey' => 1},
+        {"pcrDateTime"=>'1999-12-31 23:59:59', 'pcrKey' => 2}
+      ])
+      expect(state.pcr_date_time).to eql('1999-12-31 23:59:59')
+      expect(state.pcr_key).to eql(2)
     end
   end
 
   describe 'from_s3' do
     it 'should return a state instance matching the s3 response' do
-      state = State.from_s3({ "cr_key"  => 1 })
-      expect(state.cr_key).to eql(1)
-    end
-  end
-
-  describe '#extract_state_from_db_response' do
-    it 'should return an object with the cr_key from the db response\'s pcrKey' do
-      obj = State.extract_state_from_db_response ([ { 'pcrKey' => 1}, { 'pcrKey' => 2} ])
-      expect(obj).to eql({ "cr_key" => 2})
-    end
-  end
-
-  describe 'extract_state_from_s3_response' do
-    it 'should return an object matching the s3 response' do
-      obj = State.extract_state_from_s3_response({ cr_key: 1 })
-      expect(obj).to eql({ cr_key: 1 })
+      state = State.from_s3(@test_state_object)
+      expect(state.pcr_date_time).to eql('1900-01-01 00:00:00')
+      expect(state.pcr_key).to eql(1)
     end
   end
 

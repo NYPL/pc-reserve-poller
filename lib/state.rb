@@ -9,8 +9,8 @@ class State
     @state_object = state_object
   end
 
-  def cr_key
-    state_object["cr_key"]
+  def pcr_key
+    state_object["pcr_key"]
   end
 
   def pcr_date_time
@@ -36,7 +36,7 @@ class State
     last_key = last_element["pcrKey"]
     last_date_time = "#{last_element["pcrDateTime"]}"
     $logger.error('Missing pcrKey or date', db_response: db_response.to_a) if !last_key || !last_date_time
-    { "cr_key" => last_key, "pcr_date_time" => last_date_time }
+    { "pcr_key" => last_key, "pcr_date_time" => last_date_time }
   end
 
   def self.extract_state_from_s3_response (s3_response)

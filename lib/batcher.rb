@@ -1,6 +1,4 @@
-# A helper class for requesting data  in batches
-
-
+# A helper class for requesting data in batches
 class Batcher
 
   def initialize(type, ids)
@@ -18,14 +16,11 @@ class Batcher
     responses.reduce({}) do |acc, el|
       acc.merge el
     end
-
   end
-
 
   def self.from(type, ids)
     batch = Batcher.new(type, ids)
     batch.process
   end
-
 
 end
