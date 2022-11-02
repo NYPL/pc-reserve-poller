@@ -79,8 +79,8 @@ def handle_event(event:, context:)
       # update the state unless this is a test run
       $state = State.from_db_result response
       unless ENV['UPDATE_STATE'] == 'false'
-        $logger.info('Setting state: ', state: state.json)
-        S3Client.set_current_state state.json
+        $logger.info('Setting state: ', state: $state.json)
+        S3Client.set_current_state $state.json
       end
 
       reached_max_batches = ENV['MAX_BATCHES'] && $batch_number >= ENV['MAX_BATCHES'].to_i
