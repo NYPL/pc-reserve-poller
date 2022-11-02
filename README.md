@@ -50,7 +50,7 @@ To deploy to QA, make sure your command line is in the `qa` branch of the repo a
 
 To deploy to production, make sure your command line is in the `production` branch of the repo and follow the instructions below, but replace every instance of `qa` in the commands with `production`.
 
-```
+```bash
 1. aws ecr get-login-password --region us-east-1 --profile nypl-digital-dev | docker login --username AWS --password-stdin 946183545209.dkr.ecr.us-east-1.amazonaws.com
 
 2. docker build -t pc-reserve-poller .
@@ -61,6 +61,7 @@ To deploy to production, make sure your command line is in the `production` bran
 
 5. aws ecs update-service --cluster pc-reserve-poller-qa --service pc-reserve-poller-app-qa --force-new-deployment --region us-east-1 --profile nypl-digital-dev
 
+# This command will manually trigger the poller to run. This should not be run if you want to wait for the next scheduled event.
 6. aws ecs run-task --cluster pc-reserve-poller-qa --task-definition pc-reserve-poller-app-qa:14 --count 1 --region us-east-1 --profile nypl-digital-dev
 ```
 
