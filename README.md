@@ -44,22 +44,25 @@ This repo uses the [Main-QA-Production](https://github.com/NYPL/engineering-gene
 - Deploy app to production (must be done manually -- see below) and confirm it works
 
 ## Deployment
-The poller is deployed as an AWS ECS service to [qa](https://us-east-1.console.aws.amazon.com/ecs/home?region=us-east-1#/clusters/pc-reserve-poller-qa/services) and [prod](https://us-east-1.console.aws.amazon.com/ecs/home?region=us-east-1#/clusters/pc-reserve-poller-production/services) environments. To upload a new version of this service, you must have the `nypl-digital-dev` AWS profile set up. Then do the following:
+The poller is deployed as an AWS ECS service to [qa](https://us-east-1.console.aws.amazon.com/ecs/home?region=us-east-1#/clusters/pc-reserve-poller-qa/services) and [prod](https://us-east-1.console.aws.amazon.com/ecs/home?region=us-east-1#/clusters/pc-reserve-poller-production/services) environments. To upload a new version of this service, you must have the `nypl-digital-dev` AWS profile set up. Note that the first four instructions in both sections are based on the instructions seen when you click the **"View push commands"** button on the [AWS Elastic Container Registry page](https://us-east-1.console.aws.amazon.com/ecr/repositories/private/946183545209/pc-reserve-poller?region=us-east-1) but with slight modifications and this is where you can find the `<container-id>`.
 
-1. Click the **"View push commands"** button on the [AWS Elastic Container Registry page](https://us-east-1.console.aws.amazon.com/ecr/repositories/private/946183545209/pc-reserve-poller?region=us-east-1) and follow the instructions. The only difference is these instructions assume your Docker image is tagged `latest` but we tag our images either `qa-latest` or `production-latest`.
+To deploy to QA, make sure your command line is in the `qa` branch of the repo and follow the instructions below.
 
-2. (QA only) run:
-```
-aws ecs update-service --cluster pc-reserve-poller-qa --service pc-reserve-poller-app-qa --force-new-deployment --profile nypl-digital-dev;
+To deploy to production, make sure your command line is in the `production` branch of the repo and follow the instructions below, but replace every instance of `qa` in the commands with `production`.
 
-aws ecs run-task --cluster pc-reserve-poller-qa --task-definition pc-reserve-poller-app-qa:14 --count 1
-```
+```bash
+1. aws ecr get-login-password --region us-east-1 --profile nypl-digital-dev | docker login --username AWS --password-stdin <container-id>
 
-3. (Prod only) run:
-```
-aws ecs update-service --cluster pc-reserve-poller-production --service pc-reserve-poller-app-production --force-new-deployment --profile nypl-digital-dev;
+2. docker build -t pc-reserve-poller:local-build-latest .
 
-aws ecs run-task --cluster pc-reserve-poller-qa --task-definition pc-reserve-poller-app-production:14 --count 1
+3. docker tag pc-reserve-poller:local-build-latest <container-id>/pc-reserve-poller:qa-latest
+
+4. docker push <container-id>/pc-reserve-poller:qa-latest
+
+5. aws ecs update-service --cluster pc-reserve-poller-qa --service pc-reserve-poller-app-qa --force-new-deployment --region us-east-1 --profile nypl-digital-dev
+
+# This command will manually trigger the poller to run. This should not be run if you want to wait for the next scheduled event.
+6. aws ecs run-task --cluster pc-reserve-poller-qa --task-definition pc-reserve-poller-app-qa:14 --count 1 --region us-east-1 --profile nypl-digital-dev
 ```
 
 ## Environment Variables
