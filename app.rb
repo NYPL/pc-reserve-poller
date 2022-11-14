@@ -71,16 +71,20 @@ def handle_event(event:, context:)
       # build and execute the query
       query  = QueryBuilder.from({ pcr_key: pcr_key, pcr_date_time: pcr_date_time })
       response = $envisionware_db_client.exec_query query
+      
+      if response.count > 0
+        # process the results in kinesis
+        pc_reserve_batch = PcReserveBatch.new response
+        pc_reserve_batch.process
 
-      # process the results in kinesis
-      pc_reserve_batch = PcReserveBatch.new response
-      pc_reserve_batch.process
-
-      # update the state unless this is a test run
-      $state = State.from_db_result response
-      unless ENV['UPDATE_STATE'] == 'false'
-        $logger.info('Setting state: ', state: $state.json)
-        S3Client.set_current_state $state.json
+        # update the state unless this is a test run
+        $state = State.from_db_result response
+        unless ENV['UPDATE_STATE'] == 'false'
+          $logger.info('Setting state: ', state: $state.json)
+          S3Client.set_current_state $state.json
+        end
+      else
+        $logger.info("#{$batch_id} No results for batch")
       end
 
       reached_max_batches = ENV['MAX_BATCHES'] && $batch_number >= ENV['MAX_BATCHES'].to_i
