@@ -61,7 +61,7 @@ To deploy to production, make sure your command line is in the `production` bran
 
 5. aws ecs update-service --cluster pc-reserve-poller-qa --service pc-reserve-poller-app-qa --force-new-deployment --region us-east-1 --profile nypl-digital-dev
 
-# This command will manually trigger the poller to run. This should not be run if you want to wait for the next scheduled event.
+# This command will manually trigger the poller to run. This should not be run if you want to wait for the next scheduled event. In production, use pc-reserve-poller-app-production:1 for the task definition.
 6. aws ecs run-task --cluster pc-reserve-poller-qa --task-definition pc-reserve-poller-app-qa:14 --count 1 --region us-east-1 --profile nypl-digital-dev
 ```
 
