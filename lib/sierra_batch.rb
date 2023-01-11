@@ -9,11 +9,12 @@ class SierraBatch
     begin
       query = "SELECT patron_view.record_num, patron_view.id AS patron_record_id, patron_record_address.postal_code" +
         " FROM sierra_view.patron_view LEFT OUTER JOIN sierra_view.patron_record_address ON patron_record_address.patron_record_id=patron_view.id" +
-        " WHERE patron_view.record_num IN (#{@ids.join(",")});"
+        " WHERE patron_view.record_num IN (#{@ids.join(",")})" +
+        " ORDER BY patron_view.record_num, patron_record_address.display_order, patron_record_address.patron_record_address_type_id;"
 
       sierra_result = $sierra_db_client.exec_query query
       $logger.debug("#{$batch_id} sierra result for #{@ids.join(",")}: #{sierra_result.values}")
-      sierra_result
+      sierra_result.values.uniq(&:first)
 
     rescue SierraDbClientError => e
       $logger.error "#{$batch_id} Error fetching Sierra Batch #{@ids}"
@@ -23,7 +24,7 @@ class SierraBatch
 
   def match_to_ids(resp)
     rows = resp.map do |row|
-      [ row["record_num"], { postal_code: row["postal_code"], patron_record_id: row["patron_record_id"] } ]
+      [ row[0], { postal_code: row[2], patron_record_id: row[1] } ]
     end
 
     rows.to_h
