@@ -1,11 +1,10 @@
-FROM ruby:2.7
-
+FROM python:3.9
 ADD . /src
-
 WORKDIR /src
 
-RUN bundle lock
-RUN bundle config set deployment 'true'
-RUN bundle install
+COPY requirements.txt ./
+RUN pip install --upgrade pip && \
+	pip install -r requirements.txt
 
-CMD ["bundle",  "exec",  "./index.rb"]
+COPY . .
+CMD [ "python3", "./main.py"]
