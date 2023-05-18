@@ -1,5 +1,5 @@
 .DS_Store
-.env
-Gemfile.lock
-vendor/
-local_logs/
+__pycache__/
+*env/
+*.py[cod]
+*$py.class
