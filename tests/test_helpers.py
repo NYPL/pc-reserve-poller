@@ -20,6 +20,7 @@ class TestHelpers:
         'REDSHIFT_DB_USER': 'test_redshift_user',
         'REDSHIFT_DB_PASSWORD': 'test_redshift_password',
         'ENVISIONWARE_BATCH_SIZE': '4',
+        'MAX_BATCHES': '1',
         'S3_BUCKET': 'test_s3_bucket',
         'S3_RESOURCE': 'test_s3_resource',
         'PC_RESERVE_SCHEMA_URL': 'https://test_schema_url',
