@@ -3,6 +3,7 @@ import os
 import pytest
 
 from datetime import datetime
+from nypl_py_utils.classes.postgresql_client import PostgreSQLClientError
 from tests.test_helpers import TestHelpers
 
 _ENVISIONWARE_DATA = [
@@ -56,12 +57,10 @@ _ENCODED_RECORDS = [b'encoded1', b'encoded2', b'encoded3', b'encoded4']
 
 class TestMain:
 
-    @classmethod
-    def setup_class(cls):
+    @pytest.fixture
+    def set_env_vars(cls):
         TestHelpers.set_env_vars()
-
-    @classmethod
-    def teardown_class(cls):
+        yield
         TestHelpers.clear_env_vars()
 
     @pytest.fixture
@@ -74,8 +73,7 @@ class TestMain:
         mocker.patch(package, return_value=mock)
         return mock
 
-    def test_main_one_iteration(self, mock_helpers, mocker):
-        os.environ['MAX_BATCHES'] = '1'
+    def test_main_one_iteration(self, set_env_vars, mock_helpers, mocker):
         mock_obfuscate = mocker.patch('main.obfuscate', side_effect=[
             'obf_key1', 'obf_key2', 'obf_key3', 'obf_key4',
             'obf_id1', 'obf_id2', 'obf_id3', 'obf_id4'])
@@ -146,9 +144,10 @@ class TestMain:
             {'pcr_key': '40000000', 'pcr_date_time': '2023-04-04 04:00:00'})
         mock_s3_client.close.assert_called_once()
         mock_kinesis_client.close.assert_called_once()
-        del os.environ['MAX_BATCHES']
 
-    def test_main_multiple_iterations(self, mock_helpers, mocker):
+    def test_main_multiple_iterations(self, set_env_vars, mock_helpers,
+                                      mocker):
+        del os.environ['MAX_BATCHES']
         _TEST_ENVISIONWARE_DATA = [
             (i, 'barcode{}'.format(i), i, datetime(2023, i, i, i, 0, 0),
              'branch{}'.format(i), 'area{}'.format(i),
@@ -186,7 +185,9 @@ class TestMain:
             mocker.call('test_dt', 'test_key'),
             mocker.call('2023-04-04 04:00:00', '4')])
 
-    def test_main_no_envisionware_results(self, mock_helpers, mocker):
+    def test_main_no_envisionware_results(self, set_env_vars, mock_helpers,
+                                          mocker):
+        del os.environ['MAX_BATCHES']
         mocker.patch('main.obfuscate')
         mocker.patch('main.build_envisionware_query')
         mocker.patch('main.build_sierra_query')
@@ -214,8 +215,7 @@ class TestMain:
         mock_kinesis_client.send_records.assert_not_called()
         mock_s3_client.set_cache.assert_not_called()
 
-    def test_main_no_sierra_results(self, mock_helpers, mocker):
-        os.environ['MAX_BATCHES'] = '1'
+    def test_main_no_sierra_results(self, set_env_vars, mock_helpers, mocker):
         _TEST_ENVISIONWARE_DATA = [
             (i, 'barcode{}'.format(i), i, datetime(2023, i, i, i, 0, 0),
              'branch{}'.format(i), 'area{}'.format(i),
@@ -234,7 +234,6 @@ class TestMain:
         mocker.patch('main.build_envisionware_query')
         mocker.patch('main.build_sierra_query')
         mocker.patch('main.build_redshift_query')
-        mocker.patch('main.AvroEncoder')
         mocker.patch('main.KinesisClient')
         mocker.patch('main.S3Client')
 
@@ -264,10 +263,9 @@ class TestMain:
             mocker.call('barcode barcode2'),
             mocker.call('barcode barcode3'),
             mocker.call('barcode barcode4')])
-        del os.environ['MAX_BATCHES']
 
-    def test_main_no_redshift_results(self, mock_helpers, mocker):
-        os.environ['MAX_BATCHES'] = '1'
+    def test_main_no_redshift_results(self, set_env_vars, mock_helpers,
+                                      mocker):
         _TEST_ENVISIONWARE_DATA = [
             (i, 'barcode{}'.format(i), i, datetime(2023, i, i, i, 0, 0),
              'branch{}'.format(i), 'area{}'.format(i),
@@ -289,7 +287,6 @@ class TestMain:
         mocker.patch('main.build_envisionware_query')
         mocker.patch('main.build_sierra_query')
         mocker.patch('main.build_redshift_query')
-        mocker.patch('main.AvroEncoder')
         mocker.patch('main.KinesisClient')
         mocker.patch('main.S3Client')
 
@@ -321,4 +318,29 @@ class TestMain:
             mocker.call('3'),
             mocker.call('4'),
             mocker.call('5')])
-        del os.environ['MAX_BATCHES']
+
+    def test_main_sierra_timeout(self, set_env_vars, mock_helpers, mocker):
+        mocker.patch('main.build_envisionware_query')
+        mocker.patch('main.build_sierra_query')
+        mocker.patch('main.build_redshift_query')
+        mocker.patch('main.obfuscate', return_value='obfuscated')
+        mocker.patch('main.AvroEncoder')
+        mocker.patch('main.KinesisClient')
+        mocker.patch('main.RedshiftClient')
+        mocker.patch('main.S3Client')
+
+        mock_envisionware_client = self._set_up_mock(
+            'main.MySQLClient', mocker)
+        mock_envisionware_client.execute_query.return_value = \
+            _ENVISIONWARE_DATA
+
+        mock_sierra_client = self._set_up_mock('main.PostgreSQLClient', mocker)
+        mock_sierra_client.execute_query.side_effect = [
+            PostgreSQLClientError('test error'), []]
+
+        main.main()
+
+        mock_sierra_client.connect.assert_called_once()
+        assert mock_sierra_client.execute_query.call_count == 2
+        mock_sierra_client.close_connection.assert_called_once()
+        mock_sierra_client.close_connection.assert_called_once()

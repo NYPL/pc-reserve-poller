@@ -7,8 +7,8 @@ PLAINTEXT_VARIABLES:
     SIERRA_DB_NAME: iii
     REDSHIFT_DB_NAME: qa
     ENVISIONWARE_BATCH_SIZE: 20
-    S3_BUCKET: bic-poller-states-qa
-    S3_RESOURCE: pc_reserve_poller_state.json
+    S3_BUCKET:
+    S3_RESOURCE:
     PC_RESERVE_SCHEMA_URL: https://qa-platform.nypl.org/api/v0.1/current-schemas/PcReserve
     KINESIS_BATCH_SIZE: 20
     LOG_LEVEL: info
