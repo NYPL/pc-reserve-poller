@@ -8,7 +8,8 @@ from helpers.query_helper import (
 from nypl_py_utils.classes.avro_encoder import AvroEncoder
 from nypl_py_utils.classes.kinesis_client import KinesisClient
 from nypl_py_utils.classes.mysql_client import MySQLClient
-from nypl_py_utils.classes.postgresql_client import PostgreSQLClient
+from nypl_py_utils.classes.postgresql_client import (
+    PostgreSQLClient, PostgreSQLClientError)
 from nypl_py_utils.classes.redshift_client import RedshiftClient
 from nypl_py_utils.classes.s3_client import S3Client
 from nypl_py_utils.functions.config_helper import load_env_file
@@ -72,9 +73,14 @@ def main():
         barcodes_str = "','".join(
             pc_reserve_df['barcode'].to_string(index=False).split())
         barcodes_str = "'" + barcodes_str + "'"
+        sierra_query = build_sierra_query(barcodes_str)
         sierra_client.connect()
-        sierra_raw_data = sierra_client.execute_query(
-            build_sierra_query(barcodes_str))
+        try:
+            sierra_raw_data = sierra_client.execute_query(sierra_query)
+        except PostgreSQLClientError:
+            logger.info('Attempting Sierra query again')
+            sierra_raw_data = sierra_client.execute_query(sierra_query)
+
         sierra_client.close_connection()
         sierra_df = pd.DataFrame(
             data=sierra_raw_data, dtype='string',
