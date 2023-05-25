@@ -84,8 +84,8 @@ def main():
             logger.info('Querying Sierra for patron information by barcode')
             sierra_raw_data = sierra_client.execute_query(sierra_query)
         except PostgreSQLClientError:
-            logger.info('First query failed -- trying again')
             try:
+                logger.info('First query failed -- trying again')
                 sierra_raw_data = sierra_client.execute_query(sierra_query)
             except PostgreSQLClientError as e:
                 logger.error(
