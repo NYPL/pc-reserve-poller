@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import pandas as pd
 
@@ -74,18 +75,37 @@ def main():
             pc_reserve_df['barcode'].to_string(index=False).split())
         barcodes_str = "'" + barcodes_str + "'"
         sierra_query = build_sierra_query(barcodes_str)
+
         sierra_client.connect()
+        initial_log_level = logging.getLogger(
+            'postgresql_client').getEffectiveLevel()
+        logging.getLogger('postgresql_client').setLevel(logging.CRITICAL)
         try:
+            logger.info('Querying Sierra for patron information by barcode')
             sierra_raw_data = sierra_client.execute_query(sierra_query)
         except PostgreSQLClientError:
-            logger.info('Attempting Sierra query again')
-            sierra_raw_data = sierra_client.execute_query(sierra_query)
+            logger.info('First query failed -- trying again')
+            try:
+                sierra_raw_data = sierra_client.execute_query(sierra_query)
+            except PostgreSQLClientError as e:
+                logger.error(
+                    'Error executing Sierra query {query}:\n{error}'.format(
+                        query=sierra_query, error=e))
+                sierra_client.close_connection()
+                s3_client.close()
+                kinesis_client.close()
+                raise e from None
+        logging.getLogger('postgresql_client').setLevel(initial_log_level)
 
         sierra_client.close_connection()
         sierra_df = pd.DataFrame(
             data=sierra_raw_data, dtype='string',
             columns=['barcode', 'patron_id', 'ptype_code',
                      'patron_home_library_code', 'pcode3'])
+
+        # Some barcodes correspond to multiple patron records. For these
+        # barcodes, do not use patron information from any of the records.
+        sierra_df = sierra_df.drop_duplicates('barcode', keep=False)
 
         # Merge the dataframes, set the patron retrieval status, and obfuscate
         # the patron_id. The patron_id is either the Sierra id or, if no Sierra
