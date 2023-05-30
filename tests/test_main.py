@@ -1,3 +1,4 @@
+import logging
 import main
 import os
 import pytest
@@ -19,6 +20,8 @@ _ENVISIONWARE_DATA = [
 
 _SIERRA_DATA = [
     ('barcode1', 111111111111, 1, 'lib1', 10),
+    ('barcode3', 333333333333, 3, 'lib3', 30),
+    ('barcode3', 300000000000, 30, 'lib30', 300),
     ('barcode4', 444444444444, 4, 'lib4', 40)
 ]
 
@@ -319,10 +322,11 @@ class TestMain:
             mocker.call('4'),
             mocker.call('5')])
 
-    def test_main_sierra_timeout(self, set_env_vars, mock_helpers, mocker):
+    def test_main_sierra_query_retry(self, set_env_vars, mocker, caplog):
         mocker.patch('main.build_envisionware_query')
         mocker.patch('main.build_sierra_query')
         mocker.patch('main.build_redshift_query')
+        mocker.patch('main.load_env_file')
         mocker.patch('main.obfuscate', return_value='obfuscated')
         mocker.patch('main.AvroEncoder')
         mocker.patch('main.KinesisClient')
@@ -338,9 +342,42 @@ class TestMain:
         mock_sierra_client.execute_query.side_effect = [
             PostgreSQLClientError('test error'), []]
 
-        main.main()
+        with caplog.at_level(logging.ERROR):
+            main.main()
 
         mock_sierra_client.connect.assert_called_once()
         assert mock_sierra_client.execute_query.call_count == 2
+        assert caplog.text == ''
         mock_sierra_client.close_connection.assert_called_once()
+
+    def test_main_sierra_query_timeout(self, set_env_vars, mocker, caplog):
+        mocker.patch('main.build_envisionware_query')
+        mocker.patch('main.build_sierra_query')
+        mocker.patch('main.build_redshift_query')
+        mocker.patch('main.load_env_file')
+        mocker.patch('main.obfuscate', return_value='obfuscated')
+        mocker.patch('main.AvroEncoder')
+        mocker.patch('main.RedshiftClient')
+
+        mock_kinesis_client = self._set_up_mock('main.KinesisClient', mocker)
+        mock_s3_client = self._set_up_mock('main.S3Client', mocker)
+
+        mock_envisionware_client = self._set_up_mock(
+            'main.MySQLClient', mocker)
+        mock_envisionware_client.execute_query.return_value = \
+            _ENVISIONWARE_DATA
+
+        mock_sierra_client = self._set_up_mock('main.PostgreSQLClient', mocker)
+        mock_sierra_client.execute_query.side_effect = \
+            PostgreSQLClientError('test error')
+
+        with (pytest.raises(PostgreSQLClientError),
+              caplog.at_level(logging.ERROR)):
+            main.main()
+
+        mock_sierra_client.connect.assert_called_once()
+        assert mock_sierra_client.execute_query.call_count == 2
+        assert 'Error executing Sierra query' in caplog.text
         mock_sierra_client.close_connection.assert_called_once()
+        mock_kinesis_client.close.assert_called_once()
+        mock_s3_client.close.assert_called_once()
