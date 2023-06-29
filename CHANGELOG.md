@@ -1,3 +1,9 @@
+## 2023-06-29 -- v0.0.4
+### Added
+- Updated `configure-aws-credentials` GitHub action version
+- Updated `nypl-py-utils` version
+- Only convert datatypes where necessary -- ensures patron ids are obfuscated as integer strings
+
 ## 2023-05-25 -- v0.0.3
 ### Fixed
 - If a barcode corresponds to multiple Sierra patron records, do not use any of the patron info
