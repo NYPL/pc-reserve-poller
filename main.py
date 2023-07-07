@@ -55,6 +55,8 @@ def main():
         os.environ['REDSHIFT_DB_HOST'], os.environ['REDSHIFT_DB_NAME'],
         os.environ['REDSHIFT_DB_USER'], os.environ['REDSHIFT_DB_PASSWORD'])
 
+    sierra_timeout = os.environ.get('SIERRA_TIMEOUT', '5')
+    max_sierra_attempts = int(os.environ.get('MAX_SIERRA_ATTEMPTS', '5'))
     has_max_batches = 'MAX_BATCHES' in os.environ
     finished = False
     batch_number = 1
@@ -94,24 +96,33 @@ def main():
         sierra_query = build_sierra_query(barcodes_str)
 
         sierra_client.connect()
+        logger.info('Setting Sierra query timeout to {} minutes'.format(
+            sierra_timeout))
+        sierra_client.execute_query("SET statement_timeout='{}min';".format(
+            sierra_timeout))
+        logger.info('Querying Sierra for patron information by barcode')
+
         initial_log_level = logging.getLogger(
             'postgresql_client').getEffectiveLevel()
         logging.getLogger('postgresql_client').setLevel(logging.CRITICAL)
-        try:
-            logger.info('Querying Sierra for patron information by barcode')
-            sierra_raw_data = sierra_client.execute_query(sierra_query)
-        except PostgreSQLClientError:
+        finished = False
+        num_attempts = 1
+        while not finished:
             try:
-                logger.info('First query failed -- trying again')
                 sierra_raw_data = sierra_client.execute_query(sierra_query)
+                finished = True
             except PostgreSQLClientError as e:
-                logger.error(
-                    'Error executing Sierra query {query}:\n{error}'.format(
+                if num_attempts < max_sierra_attempts:
+                    logger.info('Query failed -- trying again')
+                    num_attempts += 1
+                else:
+                    logger.error(('Error executing Sierra query {query}:'
+                                  '\n{error}').format(
                         query=sierra_query, error=e))
-                sierra_client.close_connection()
-                s3_client.close()
-                kinesis_client.close()
-                raise e from None
+                    sierra_client.close_connection()
+                    s3_client.close()
+                    kinesis_client.close()
+                    raise e from None
         logging.getLogger('postgresql_client').setLevel(initial_log_level)
 
         sierra_client.close_connection()

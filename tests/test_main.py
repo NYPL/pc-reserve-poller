@@ -100,7 +100,7 @@ class TestMain:
         mock_sierra_query = mocker.patch(
             'main.build_sierra_query', return_value='SIERRA QUERY')
         mock_sierra_client = self._set_up_mock('main.PostgreSQLClient', mocker)
-        mock_sierra_client.execute_query.return_value = _SIERRA_DATA
+        mock_sierra_client.execute_query.side_effect = [None, _SIERRA_DATA]
 
         mock_redshift_query = mocker.patch(
             'main.build_redshift_query', return_value='REDSHIFT QUERY')
@@ -119,8 +119,9 @@ class TestMain:
         mock_sierra_client.connect.assert_called_once()
         mock_sierra_query.assert_called_once_with(
             "'barcode1','25555000000000','barcode3','barcode4'")
-        mock_sierra_client.execute_query.assert_called_once_with(
-            'SIERRA QUERY')
+        mock_sierra_client.execute_query.assert_has_calls([
+            mocker.call("SET statement_timeout='5min';"),
+            mocker.call('SIERRA QUERY')])
         mock_sierra_client.close_connection.assert_called_once()
 
         mock_redshift_client.connect.assert_called_once()
@@ -240,8 +241,8 @@ class TestMain:
         mocker.patch('main.KinesisClient')
         mocker.patch('main.S3Client')
 
-        mock_obfuscate = mocker.patch('main.obfuscate',
-                                      return_value='obfuscated')
+        mock_obfuscate = mocker.patch(
+            'main.obfuscate', return_value='obfuscated')
         mock_avro_encoder = self._set_up_mock('main.AvroEncoder', mocker)
         mock_redshift_client = self._set_up_mock('main.RedshiftClient', mocker)
 
@@ -251,7 +252,7 @@ class TestMain:
             _TEST_ENVISIONWARE_DATA
 
         mock_sierra_client = self._set_up_mock('main.PostgreSQLClient', mocker)
-        mock_sierra_client.execute_query.return_value = []
+        mock_sierra_client.execute_query.side_effect = [None, []]
 
         main.main()
 
@@ -293,8 +294,8 @@ class TestMain:
         mocker.patch('main.KinesisClient')
         mocker.patch('main.S3Client')
 
-        mock_obfuscate = mocker.patch('main.obfuscate',
-                                      return_value='obfuscated')
+        mock_obfuscate = mocker.patch(
+            'main.obfuscate', return_value='obfuscated')
         mock_avro_encoder = self._set_up_mock('main.AvroEncoder', mocker)
         mock_redshift_client = self._set_up_mock('main.RedshiftClient', mocker)
 
@@ -304,7 +305,8 @@ class TestMain:
             _TEST_ENVISIONWARE_DATA
 
         mock_sierra_client = self._set_up_mock('main.PostgreSQLClient', mocker)
-        mock_sierra_client.execute_query.return_value = _TEST_SIERRA_DATA
+        mock_sierra_client.execute_query.side_effect = [
+            None, _TEST_SIERRA_DATA]
 
         mock_redshift_client = self._set_up_mock('main.RedshiftClient', mocker)
         mock_redshift_client.execute_query.return_value = []
@@ -340,13 +342,16 @@ class TestMain:
 
         mock_sierra_client = self._set_up_mock('main.PostgreSQLClient', mocker)
         mock_sierra_client.execute_query.side_effect = [
-            PostgreSQLClientError('test error'), []]
+            None,
+            PostgreSQLClientError('test error'),
+            PostgreSQLClientError('test error'),
+            []]
 
         with caplog.at_level(logging.ERROR):
             main.main()
 
         mock_sierra_client.connect.assert_called_once()
-        assert mock_sierra_client.execute_query.call_count == 2
+        assert mock_sierra_client.execute_query.call_count == 4
         assert caplog.text == ''
         mock_sierra_client.close_connection.assert_called_once()
 
@@ -368,15 +373,15 @@ class TestMain:
             _ENVISIONWARE_DATA
 
         mock_sierra_client = self._set_up_mock('main.PostgreSQLClient', mocker)
-        mock_sierra_client.execute_query.side_effect = \
-            PostgreSQLClientError('test error')
+        mock_sierra_client.execute_query.side_effect = [None] + ([
+            PostgreSQLClientError('test error')]*5)
 
         with (pytest.raises(PostgreSQLClientError),
               caplog.at_level(logging.ERROR)):
             main.main()
 
         mock_sierra_client.connect.assert_called_once()
-        assert mock_sierra_client.execute_query.call_count == 2
+        assert mock_sierra_client.execute_query.call_count == 6
         assert 'Error executing Sierra query' in caplog.text
         mock_sierra_client.close_connection.assert_called_once()
         mock_kinesis_client.close.assert_called_once()
