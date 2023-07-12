@@ -1,3 +1,7 @@
+## 2023-07-12 -- v1.0.1
+### Fixed
+- Increase max Sierra query attempts to 10
+
 ## 2023-07-07 -- v1.0.0
 ### Fixed
 - Manually set Sierra query timeout to 5 minutes in order to prevent a bug in ECS where a query will time out after 10 minutes (the PostgreSQL default) but the error will not be propagated and the connection will hang for the next 2 hours. Through trial and error, 5 minutes was found to be the maximum timeout before this bug occurs. The root cause of the bug is still unknown.
