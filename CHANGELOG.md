@@ -1,3 +1,7 @@
+## 2024-06-21 -- v1.1.0
+### Fixed
+- Handle patron_home_library_code in standardized way (convert empty strings and 'none' to NULL)
+
 ## 2023-07-12 -- v1.0.1
 ### Fixed
 - Increase max Sierra query attempts to 10
