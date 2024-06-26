@@ -8,14 +8,14 @@ help:
 	@echo "make test"
 	@echo "    run associated test suite with pytest"
 	@echo "make lint"
-	@echo "    lint project files using the flake8 linter"
+	@echo "    lint project files using the black linter"
 
 run:
 	export ENVIRONMENT=devel; \
 	python main.py
 
 test:
-	pytest
+	pytest tests
 
 lint:
-	flake8 --exclude *env
+	black ./ --check --exclude="(env/)|(tests/)"
