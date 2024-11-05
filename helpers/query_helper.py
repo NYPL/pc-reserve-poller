@@ -10,23 +10,17 @@ _ENVISIONWARE_QUERY = """
     LIMIT {limit};"""
 
 _SIERRA_QUERY = """
-    WITH phrase_barcodes AS (
-        SELECT record_id, index_entry
-        FROM sierra_view.phrase_entry
-        WHERE index_tag = 'b' AND record_id IN (
-            SELECT record_id
-            FROM sierra_view.phrase_entry
-            WHERE index_tag || index_entry IN ({})
-        )
-    )
     SELECT
         barcode, id, ptype_code, pcode3,
         CASE WHEN LENGTH(TRIM(home_library_code)) = 0
             OR TRIM(home_library_code) = 'none' THEN NULL
             ELSE TRIM(home_library_code) END
-    FROM phrase_barcodes INNER JOIN sierra_view.patron_view
-        ON phrase_barcodes.record_id = patron_view.id
-        AND phrase_barcodes.index_entry = patron_view.barcode;"""
+    FROM sierra_view.patron_view
+    WHERE id IN (
+        SELECT record_id
+        FROM sierra_view.phrase_entry
+        WHERE index_tag || index_entry IN ({})
+    );"""
 
 _REDSHIFT_QUERY = """
     SELECT patron_id, postal_code, geoid
