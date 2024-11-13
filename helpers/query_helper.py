@@ -10,13 +10,17 @@ _ENVISIONWARE_QUERY = """
     LIMIT {limit};"""
 
 _SIERRA_QUERY = """
-    SELECT 
+    SELECT
         barcode, id, ptype_code, pcode3,
         CASE WHEN LENGTH(TRIM(home_library_code)) = 0
             OR TRIM(home_library_code) = 'none' THEN NULL
             ELSE TRIM(home_library_code) END
     FROM sierra_view.patron_view
-    WHERE barcode IN ({});"""
+    WHERE id IN (
+        SELECT record_id
+        FROM sierra_view.phrase_entry
+        WHERE index_tag || index_entry IN ({})
+    );"""
 
 _REDSHIFT_QUERY = """
     SELECT patron_id, postal_code, geoid
