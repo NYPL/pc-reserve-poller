@@ -11,8 +11,6 @@ PLAINTEXT_VARIABLES:
     S3_RESOURCE:
     PC_RESERVE_SCHEMA_URL: https://qa-platform.nypl.org/api/v0.1/current-schemas/PcReserve
     KINESIS_BATCH_SIZE: 20
-    SIERRA_TIMEOUT: 10
-    MAX_SIERRA_ATTEMPTS: 3
     LOG_LEVEL: info
     MAX_BATCHES: 3
     IGNORE_CACHE: True
