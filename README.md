@@ -64,8 +64,6 @@ The first 11 unencrypted variables (every variable through `KINESIS_BATCH_SIZE`)
 | `S3_RESOURCE` | Name of the resource for the S3 cache. This differs between QA and prod and should be empty when not using the cache locally. |
 | `PC_RESERVE_SCHEMA_URL` | Platform API endpoint from which to retrieve the PcReserve Avro schema |
 | `KINESIS_BATCH_SIZE` | How many records should be sent to Kinesis at once. Kinesis supports up to 500 records per batch. |
-| `SIERRA_TIMEOUT` (optional) | Number of minutes a Sierra query is allowed to run before timing out. This should be `5` or fewer in `qa` and `production` to prevent an ECS bug where a statement timeout error isn't propagated and the connection hangs. Set to `5` by default. |
-| `MAX_SIERRA_ATTEMPTS` (optional) | Maximum number of attempts to try querying Sierra before erroring out. Hence, the maximum total Sierra query time will be `SIERRA_TIMEOUT` times `MAX_SIERRA_ATTEMPTS` minutes. Set to `10` by default. |
 | `LOG_LEVEL` (optional) | What level of logs should be output. Set to `info` by default. |
 | `MAX_BATCHES` (optional) | The maximum number of times the poller should poll Envisionware per session. If this is not set, the poller will continue querying until all new records in Envisionware have been processed. |
 | `IGNORE_CACHE` (optional) | Whether fetching and setting the state from S3 should not be done. If this is true, the `PCR_DATE_TIME` and `PCR_KEY` environment variables will be used for the initial state (or `2023-01-01 00:00:00 +0000` and `0` by default). |

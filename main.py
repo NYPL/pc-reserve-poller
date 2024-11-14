@@ -1,5 +1,4 @@
 import json
-import logging
 import os
 import pandas as pd
 
@@ -9,13 +8,10 @@ from helpers.query_helper import (
     build_redshift_query,
     build_sierra_query,
 )
-from nypl_py_utils.classes.avro_encoder import AvroEncoder
+from nypl_py_utils.classes.avro_client import AvroEncoder
 from nypl_py_utils.classes.kinesis_client import KinesisClient
 from nypl_py_utils.classes.mysql_client import MySQLClient
-from nypl_py_utils.classes.postgresql_client import (
-    PostgreSQLClient,
-    PostgreSQLClientError,
-)
+from nypl_py_utils.classes.postgresql_client import PostgreSQLClient
 from nypl_py_utils.classes.redshift_client import RedshiftClient
 from nypl_py_utils.classes.s3_client import S3Client
 from nypl_py_utils.functions.config_helper import load_env_file
@@ -71,8 +67,6 @@ def main():
         os.environ["REDSHIFT_DB_PASSWORD"],
     )
 
-    sierra_timeout = os.environ.get("SIERRA_TIMEOUT", "5")
-    max_sierra_attempts = int(os.environ.get("MAX_SIERRA_ATTEMPTS", "5"))
     has_max_batches = "MAX_BATCHES" in os.environ
     finished = False
     batch_number = 1
@@ -90,7 +84,7 @@ def main():
             )
         )
         envisionware_client.close_connection()
-        if len(pc_reserve_raw_data) == 0:
+        if not pc_reserve_raw_data:
             break
         pc_reserve_df = pd.DataFrame(
             data=pc_reserve_raw_data,
@@ -104,7 +98,10 @@ def main():
                 "staff_override",
             ],
         )
-        pc_reserve_df["key"] = pc_reserve_df["key"].astype("Int64").astype("string")
+        pc_reserve_df["key"] = pc_reserve_df["key"].astype("Int64")
+        pc_reserve_df[["key", "barcode"]] = pc_reserve_df[["key", "barcode"]].astype(
+            "string"
+        )
         pc_reserve_df["transaction_et"] = pc_reserve_df["transaction_et"].dt.date
 
         # Obfuscate key
@@ -113,39 +110,9 @@ def main():
             pc_reserve_df["key"] = list(executor.map(obfuscate, pc_reserve_df["key"]))
 
         # Query Sierra for patron info using the patron barcodes
-        barcodes_str = "','".join(
-            pc_reserve_df["barcode"].to_string(index=False).split()
-        )
-        barcodes_str = "'" + barcodes_str + "'"
-        sierra_query = build_sierra_query(barcodes_str)
-
+        barcodes_str = "'b" + "','b".join(pc_reserve_df["barcode"].unique()) + "'"
         sierra_client.connect()
-        logger.info(f"Setting Sierra query timeout to {sierra_timeout} minutes")
-        sierra_client.execute_query(f"SET statement_timeout='{sierra_timeout}min';")
-        logger.info("Querying Sierra for patron information by barcode")
-
-        initial_log_level = logging.getLogger("postgresql_client").getEffectiveLevel()
-        logging.getLogger("postgresql_client").setLevel(logging.CRITICAL)
-        finished = False
-        num_attempts = 1
-        while not finished:
-            try:
-                sierra_raw_data = sierra_client.execute_query(sierra_query)
-                finished = True
-            except PostgreSQLClientError as e:
-                if num_attempts < max_sierra_attempts:
-                    logger.info("Query failed -- trying again")
-                    num_attempts += 1
-                else:
-                    logger.error(
-                        f"Error executing Sierra query {sierra_query}:" "\n{e}"
-                    )
-                    sierra_client.close_connection()
-                    s3_client.close()
-                    kinesis_client.close()
-                    raise e from None
-        logging.getLogger("postgresql_client").setLevel(initial_log_level)
-
+        sierra_raw_data = sierra_client.execute_query(build_sierra_query(barcodes_str))
         sierra_client.close_connection()
         sierra_df = pd.DataFrame(
             data=sierra_raw_data,
@@ -158,14 +125,15 @@ def main():
             ],
         )
 
-        # Some barcodes correspond to multiple patron records. For these
-        # barcodes, do not use patron information from any of the records.
+        # Some barcodes correspond to multiple patron records. For these barcodes, do
+        # not use patron information from any of the records.
+        sierra_df = sierra_df[pd.notnull(sierra_df["barcode"])]
         sierra_df = sierra_df.drop_duplicates("barcode", keep=False)
         sierra_df["patron_id"] = sierra_df["patron_id"].astype("Int64").astype("string")
 
-        # Merge the dataframes, set the patron retrieval status, and obfuscate
-        # the patron_id. The patron_id is either the Sierra id or, if no Sierra
-        # id is found for the barcode, the barcode prepended with 'barcode '.
+        # Merge the dataframes, set the patron retrieval status, and obfuscate the
+        # patron_id. The patron_id is either the Sierra id or, if no Sierra id is found
+        # for the barcode, the barcode prepended with 'barcode '.
         pc_reserve_df = pc_reserve_df.merge(sierra_df, how="left", on="barcode")
         pc_reserve_df = pc_reserve_df.apply(_set_patron_retrieval_status, axis=1)
         with ThreadPoolExecutor() as executor:
@@ -173,14 +141,12 @@ def main():
                 executor.map(obfuscate, pc_reserve_df["patron_id"])
             )
 
-        # Query Redshift for the zip code and geoid using the obfuscated Sierra
-        # ids
-        sierra_ids = pc_reserve_df[pc_reserve_df["patron_retrieval_status"] == "found"][
-            "patron_id"
+        # Query Redshift for the zip code and geoid using the obfuscated Sierra ids
+        sierra_ids = pc_reserve_df.loc[
+            pc_reserve_df["patron_retrieval_status"] == "found", "patron_id"
         ]
-        if len(sierra_ids) > 0:
-            ids_str = "','".join(sierra_ids.to_string(index=False).split())
-            ids_str = "'" + ids_str + "'"
+        if not sierra_ids.empty:
+            ids_str = "'" + "','".join(sierra_ids.unique()) + "'"
             redshift_table = "patron_info"
             if os.environ["REDSHIFT_DB_NAME"] != "production":
                 redshift_table += "_" + os.environ["REDSHIFT_DB_NAME"]
@@ -248,7 +214,8 @@ def main():
 
 
 def _set_patron_retrieval_status(row):
-    if not pd.isnull(row["patron_id"]):
+    """Sets a barcode's Sierra retrieval status"""
+    if pd.notnull(row["patron_id"]):
         row["patron_retrieval_status"] = "found"
     elif row["barcode"].startswith("25555"):
         row["patron_retrieval_status"] = "guest_pass"
@@ -260,10 +227,7 @@ def _set_patron_retrieval_status(row):
 
 
 def _get_poller_state(s3_client, poller_state, batch_number):
-    """
-    Retrieves the poller state from the S3 cache, the config, or the local
-    memory
-    """
+    """Retrieves the poller state from the S3 cache, the config, or the local memory"""
     if os.environ.get("IGNORE_CACHE", False) != "True":
         return s3_client.fetch_cache()
     elif batch_number == 1:

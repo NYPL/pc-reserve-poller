@@ -1,3 +1,14 @@
+## 2024-11-05 -- v2.0.0
+### Added
+- Rewrite Sierra barcode --> patron_id query to use more efficient phrase_entry table
+- Delete Sierra query retry logic
+- Increase batch size to 10k
+
+### Fixed
+- Upgrade from Python 3.9 to Python 3.12
+- Upgrade to `nypl-py-utils` v1.4.0
+- Add .python-version, devel_requirements, and conftest files
+
 ## 2024-06-21 -- v1.1.0
 ### Fixed
 - Handle patron_home_library_code in standardized way (convert empty strings and 'none' to NULL)
