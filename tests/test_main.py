@@ -21,8 +21,7 @@ _SIERRA_DF = pd.DataFrame([
     ("111111111111", "barcode1", 1, 10, "lib1"),
     ("444444444444", "barcode4", 4, 40, "lib4")],
     columns=["patron_id", "barcode", "ptype_code", "pcode3",
-             "patron_home_library_code"])
-_SIERRA_DF["patron_id"] = _SIERRA_DF["patron_id"].astype("string")
+             "patron_home_library_code"]).astype({"patron_id": "string"})
 
 _REDSHIFT_DF = pd.DataFrame(
     [["obf_id1", "zip1", "geoid1"],],
