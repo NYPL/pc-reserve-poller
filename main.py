@@ -3,11 +3,7 @@ import os
 import pandas as pd
 
 from concurrent.futures import ThreadPoolExecutor
-from helpers.query_helper import (
-    build_envisionware_query,
-    build_redshift_query,
-    build_sierra_query,
-)
+from helpers.query_helper import build_envisionware_query
 from nypl_py_utils.classes.avro_client import AvroEncoder
 from nypl_py_utils.classes.kinesis_client import KinesisClient
 from nypl_py_utils.classes.mysql_client import MySQLClient
@@ -17,7 +13,10 @@ from nypl_py_utils.classes.s3_client import S3Client
 from nypl_py_utils.functions.config_helper import load_env_file
 from nypl_py_utils.functions.log_helper import create_log
 from nypl_py_utils.functions.obfuscation_helper import obfuscate
-
+from nypl_py_utils.functions.patron_data_helper import (
+    get_redshift_patron_data,
+    get_sierra_patron_data_from_barcodes,
+)
 
 _DTYPE_MAP = {
     "patron_id": "string",
@@ -109,31 +108,12 @@ def main():
         with ThreadPoolExecutor() as executor:
             pc_reserve_df["key"] = list(executor.map(obfuscate, pc_reserve_df["key"]))
 
-        # Query Sierra for patron info using the patron barcodes
-        barcodes_str = "'b" + "','b".join(pc_reserve_df["barcode"].unique()) + "'"
-        sierra_client.connect()
-        sierra_raw_data = sierra_client.execute_query(build_sierra_query(barcodes_str))
-        sierra_client.close_connection()
-        sierra_df = pd.DataFrame(
-            data=sierra_raw_data,
-            columns=[
-                "barcode",
-                "patron_id",
-                "ptype_code",
-                "pcode3",
-                "patron_home_library_code",
-            ],
+        # Get patron info from Sierra, set the patron retrieval status, and obfuscate
+        # the patron_id. The patron_id is either the Sierra id or, if no Sierra id is
+        # found for the barcode, the barcode prepended with 'barcode '.
+        sierra_df = get_sierra_patron_data_from_barcodes(
+            sierra_client, pc_reserve_df["barcode"]
         )
-
-        # Some barcodes correspond to multiple patron records. For these barcodes, do
-        # not use patron information from any of the records.
-        sierra_df = sierra_df[pd.notnull(sierra_df["barcode"])]
-        sierra_df = sierra_df.drop_duplicates("barcode", keep=False)
-        sierra_df["patron_id"] = sierra_df["patron_id"].astype("Int64").astype("string")
-
-        # Merge the dataframes, set the patron retrieval status, and obfuscate the
-        # patron_id. The patron_id is either the Sierra id or, if no Sierra id is found
-        # for the barcode, the barcode prepended with 'barcode '.
         pc_reserve_df = pc_reserve_df.merge(sierra_df, how="left", on="barcode")
         pc_reserve_df = pc_reserve_df.apply(_set_patron_retrieval_status, axis=1)
         with ThreadPoolExecutor() as executor:
@@ -141,28 +121,14 @@ def main():
                 executor.map(obfuscate, pc_reserve_df["patron_id"])
             )
 
-        # Query Redshift for the zip code and geoid using the obfuscated Sierra ids
-        sierra_ids = pc_reserve_df.loc[
-            pc_reserve_df["patron_retrieval_status"] == "found", "patron_id"
-        ]
-        if not sierra_ids.empty:
-            ids_str = "'" + "','".join(sierra_ids.unique()) + "'"
-            redshift_table = "patron_info"
-            if os.environ["REDSHIFT_DB_NAME"] != "production":
-                redshift_table += "_" + os.environ["REDSHIFT_DB_NAME"]
-            redshift_client.connect()
-            redshift_raw_data = redshift_client.execute_query(
-                build_redshift_query(redshift_table, ids_str)
-            )
-            redshift_client.close_connection()
-        else:
-            logger.info("No Sierra ids found to query Redshift with")
-            redshift_raw_data = []
-        redshift_df = pd.DataFrame(
-            data=redshift_raw_data, columns=["patron_id", "postal_code", "geoid"]
+        # Get additional patron info from Redshift, merge the dataframes, and convert
+        # field dtypes
+        redshift_df = get_redshift_patron_data(
+            redshift_client,
+            pc_reserve_df.loc[
+                pc_reserve_df["patron_retrieval_status"] == "found", "patron_id"
+            ],
         )
-
-        # Merge the dataframes and convert necessary fields to integers
         pc_reserve_df = pc_reserve_df.merge(redshift_df, how="left", on="patron_id")
         pc_reserve_df = pc_reserve_df.astype(_DTYPE_MAP)
 

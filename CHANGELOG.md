@@ -1,3 +1,7 @@
+## 2024-11-22 -- v2.0.1
+### Added
+- Use nypl-py-utils patron_data_helper methods to get Sierra and Redshift patron info
+
 ## 2024-11-05 -- v2.0.0
 ### Added
 - Rewrite Sierra barcode --> patron_id query to use more efficient phrase_entry table
