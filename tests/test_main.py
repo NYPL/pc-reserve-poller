@@ -1,10 +1,10 @@
-import logging
 import main
 import os
+import pandas as pd
 import pytest
 
 from datetime import datetime
-from nypl_py_utils.classes.postgresql_client import PostgreSQLClientError
+from pandas.testing import assert_series_equal
 
 _ENVISIONWARE_DATA = [
     (10000000, "barcode1", 100, datetime(2023, 1, 1, 1, 0, 0), "branch1", "area1",
@@ -17,15 +17,16 @@ _ENVISIONWARE_DATA = [
      "staff_override4"),
 ]
 
-_SIERRA_DATA = [
-    ("barcode1", 111111111111, 1, 10, "lib1"),
-    ("barcode3", 333333333333, 3, 30, "lib3"),
-    ("barcode3", 300000000000, 30, 300, "lib30"),
-    ("barcode4", 444444444444, 4, 40, "lib4"),
-    (None, 444444444444, None, None, None),
-]
+_SIERRA_DF = pd.DataFrame([
+    ("111111111111", "barcode1", 1, 10, "lib1"),
+    ("444444444444", "barcode4", 4, 40, "lib4")],
+    columns=["patron_id", "barcode", "ptype_code", "pcode3",
+             "patron_home_library_code"]).astype({"patron_id": "string"})
 
-_REDSHIFT_DATA = (["obf_id1", "zip1", "geoid1"], ["obf_id4", "zip4", None])
+_REDSHIFT_DF = pd.DataFrame(
+    [["obf_id1", "zip1", "geoid1"],],
+    columns=["patron_id", "postal_code", "geoid"]
+)
 
 _RESULTS = [
     {"patron_id": "obf_id1", "ptype_code": 1, "patron_home_library_code": "lib1",
@@ -44,7 +45,7 @@ _RESULTS = [
      "area": "area3", "staff_override": "staff_override3",
      "patron_retrieval_status": "missing"},
     {"patron_id": "obf_id4", "ptype_code": 4, "patron_home_library_code": "lib4",
-     "pcode3": 40, "postal_code": "zip4", "geoid": None, "key": "obf_key4",
+     "pcode3": 40, "postal_code": None, "geoid": None, "key": "obf_key4",
      "minutes_used": 400, "transaction_et": "2023-04-04", "branch": "branch4",
      "area": "area4", "staff_override": "staff_override4",
      "patron_retrieval_status": "found"},
@@ -69,6 +70,10 @@ class TestMain:
         mock_obfuscate = mocker.patch("main.obfuscate", side_effect=[
             "obf_key1", "obf_key2", "obf_key3", "obf_key4",
             "obf_id1", "obf_id2", "obf_id3", "obf_id4"])
+        mock_get_sierra_patron_data_from_barcodes = mocker.patch(
+            "main.get_sierra_patron_data_from_barcodes", return_value=_SIERRA_DF)
+        mock_get_redshift_patron_data = mocker.patch(
+            "main.get_redshift_patron_data", return_value=_REDSHIFT_DF)
 
         mock_kinesis_client = self._set_up_mock("main.KinesisClient", mocker)
 
@@ -86,18 +91,8 @@ class TestMain:
         )
         mock_envisionware_client = self._set_up_mock("main.MySQLClient", mocker)
         mock_envisionware_client.execute_query.return_value = _ENVISIONWARE_DATA
-
-        mock_sierra_query = mocker.patch(
-            "main.build_sierra_query", return_value="SIERRA QUERY"
-        )
         mock_sierra_client = self._set_up_mock("main.PostgreSQLClient", mocker)
-        mock_sierra_client.execute_query.return_value = _SIERRA_DATA
-
-        mock_redshift_query = mocker.patch(
-            "main.build_redshift_query", return_value="REDSHIFT QUERY"
-        )
         mock_redshift_client = self._set_up_mock("main.RedshiftClient", mocker)
-        mock_redshift_client.execute_query.return_value = _REDSHIFT_DATA
 
         main.main()
 
@@ -110,18 +105,20 @@ class TestMain:
         )
         mock_envisionware_client.close_connection.assert_called_once()
 
-        mock_sierra_client.connect.assert_called_once()
-        mock_sierra_query.assert_called_once_with(
-            "'bbarcode1','b25555000000000','bbarcode3','bbarcode4'"
-        )
-        mock_sierra_client.close_connection.assert_called_once()
+        mock_get_sierra_patron_data_from_barcodes.assert_called_once()
+        sierra_args = mock_get_sierra_patron_data_from_barcodes.call_args[0]
+        assert sierra_args[0] == mock_sierra_client
+        assert_series_equal(
+            sierra_args[1],
+            pd.Series(["barcode1", "25555000000000", "barcode3", "barcode4"],
+                      name="barcode", dtype="string"))
 
-        mock_redshift_client.connect.assert_called_once()
-        mock_redshift_query.assert_called_once_with(
-            "patron_info_test_redshift_name", "'obf_id1','obf_id4'"
-        )
-        mock_redshift_client.execute_query.assert_called_once_with("REDSHIFT QUERY")
-        mock_redshift_client.close_connection.assert_called_once()
+        mock_get_redshift_patron_data.assert_called_once()
+        redshift_args = mock_get_redshift_patron_data.call_args[0]
+        assert redshift_args[0] == mock_redshift_client
+        assert_series_equal(
+            redshift_args[1],
+            pd.Series(["obf_id1", "obf_id4"], name="patron_id", index=[0, 3]))
 
         mock_obfuscate.assert_has_calls(
             [
@@ -152,8 +149,6 @@ class TestMain:
              "staff_override{}".format(i))
             for i in range(1, 7)]
         mocker.patch("main.obfuscate")
-        mocker.patch("main.build_sierra_query")
-        mocker.patch("main.build_redshift_query")
         mocker.patch("main.AvroEncoder")
         mocker.patch("main.KinesisClient")
         mocker.patch("main.PostgreSQLClient")
@@ -194,14 +189,15 @@ class TestMain:
         del os.environ["MAX_BATCHES"]
         mocker.patch("main.obfuscate")
         mocker.patch("main.build_envisionware_query")
-        mocker.patch("main.build_sierra_query")
-        mocker.patch("main.build_redshift_query")
+        mocker.patch("main.PostgreSQLClient")
+        mocker.patch("main.RedshiftClient")
+        mock_get_sierra_patron_data_from_barcodes = mocker.patch(
+            "main.get_sierra_patron_data_from_barcodes")
+        mock_get_redshift_patron_data = mocker.patch("main.get_redshift_patron_data")
 
         mock_s3_client = self._set_up_mock("main.S3Client", mocker)
         mock_kinesis_client = self._set_up_mock("main.KinesisClient", mocker)
         mock_avro_encoder = self._set_up_mock("main.AvroEncoder", mocker)
-        mock_sierra_client = self._set_up_mock("main.PostgreSQLClient", mocker)
-        mock_redshift_client = self._set_up_mock("main.RedshiftClient", mocker)
 
         mock_envisionware_client = self._set_up_mock("main.MySQLClient", mocker)
         mock_envisionware_client.execute_query.return_value = []
@@ -213,13 +209,13 @@ class TestMain:
         mock_s3_client.close.assert_called_once()
         mock_kinesis_client.close.assert_called_once()
 
-        mock_sierra_client.connect.assert_not_called()
-        mock_redshift_client.connect.assert_not_called()
+        mock_get_sierra_patron_data_from_barcodes.assert_not_called()
+        mock_get_redshift_patron_data.assert_not_called()
         mock_avro_encoder.encode_batch.assert_not_called()
         mock_kinesis_client.send_records.assert_not_called()
         mock_s3_client.set_cache.assert_not_called()
 
-    def test_main_no_sierra_results(self, mock_helpers, mocker):
+    def test_main_no_sierra_redshift_results(self, mock_helpers, mocker):
         _TEST_ENVISIONWARE_DATA = [
             (i, "barcode{}".format(i), i, datetime(2023, i, i, i, 0, 0),
              "branch{}".format(i), "area{}".format(i),
@@ -236,24 +232,26 @@ class TestMain:
             for i in range(1, 5)]
 
         mocker.patch("main.build_envisionware_query")
-        mocker.patch("main.build_sierra_query")
-        mocker.patch("main.build_redshift_query")
         mocker.patch("main.KinesisClient")
         mocker.patch("main.S3Client")
 
         mock_obfuscate = mocker.patch("main.obfuscate", return_value="obfuscated")
+        mocker.patch(
+            "main.get_sierra_patron_data_from_barcodes",
+            return_value=pd.DataFrame(
+                [], columns=["patron_id", "barcode", "ptype_code", "pcode3",
+                             "patron_home_library_code"]))
+        mocker.patch(
+            "main.get_redshift_patron_data",
+            return_value=pd.DataFrame(
+                [], columns=["patron_id", "postal_code", "geoid"]))
         mock_avro_encoder = self._set_up_mock("main.AvroEncoder", mocker)
-        mock_redshift_client = self._set_up_mock("main.RedshiftClient", mocker)
 
         mock_envisionware_client = self._set_up_mock("main.MySQLClient", mocker)
         mock_envisionware_client.execute_query.return_value = _TEST_ENVISIONWARE_DATA
 
-        mock_sierra_client = self._set_up_mock("main.PostgreSQLClient", mocker)
-        mock_sierra_client.execute_query.return_value = []
-
         main.main()
 
-        mock_redshift_client.connect.assert_not_called()
         mock_avro_encoder.encode_batch.assert_called_once_with(_RESULTS)
         mock_obfuscate.assert_has_calls(
             [
@@ -265,59 +263,5 @@ class TestMain:
                 mocker.call("barcode barcode2"),
                 mocker.call("barcode barcode3"),
                 mocker.call("barcode barcode4"),
-            ]
-        )
-
-    def test_main_no_redshift_results(self, mock_helpers, mocker):
-        _TEST_ENVISIONWARE_DATA = [
-            (i, "barcode{}".format(i), i, datetime(2023, i, i, i, 0, 0),
-             "branch{}".format(i), "area{}".format(i),
-             "staff_override{}".format(i))
-            for i in range(1, 5)]
-        _TEST_SIERRA_DATA = [
-            ("barcode{}".format(i), i+1, i, i, "lib{}".format(i))
-            for i in range(1, 5)]
-        _RESULTS = [
-            {"patron_id": "obfuscated", "ptype_code": i,
-             "patron_home_library_code": "lib{}".format(i), "pcode3": i,
-             "postal_code": None, "geoid": None, "key": "obfuscated",
-             "minutes_used": i, "transaction_et": "2023-0{}-0{}".format(i, i),
-             "branch": "branch{}".format(i), "area": "area{}".format(i),
-             "staff_override": "staff_override{}".format(i),
-             "patron_retrieval_status": "found"}
-            for i in range(1, 5)]
-
-        mocker.patch("main.build_envisionware_query")
-        mocker.patch("main.build_sierra_query")
-        mocker.patch("main.build_redshift_query")
-        mocker.patch("main.KinesisClient")
-        mocker.patch("main.S3Client")
-
-        mock_obfuscate = mocker.patch("main.obfuscate", return_value="obfuscated")
-        mock_avro_encoder = self._set_up_mock("main.AvroEncoder", mocker)
-        mock_redshift_client = self._set_up_mock("main.RedshiftClient", mocker)
-
-        mock_envisionware_client = self._set_up_mock("main.MySQLClient", mocker)
-        mock_envisionware_client.execute_query.return_value = _TEST_ENVISIONWARE_DATA
-
-        mock_sierra_client = self._set_up_mock("main.PostgreSQLClient", mocker)
-        mock_sierra_client.execute_query.return_value =  _TEST_SIERRA_DATA
-
-        mock_redshift_client = self._set_up_mock("main.RedshiftClient", mocker)
-        mock_redshift_client.execute_query.return_value = []
-
-        main.main()
-
-        mock_avro_encoder.encode_batch.assert_called_once_with(_RESULTS)
-        mock_obfuscate.assert_has_calls(
-            [
-                mocker.call("1"),
-                mocker.call("2"),
-                mocker.call("3"),
-                mocker.call("4"),
-                mocker.call("2"),
-                mocker.call("3"),
-                mocker.call("4"),
-                mocker.call("5"),
             ]
         )
